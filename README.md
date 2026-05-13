@@ -42,23 +42,23 @@ Primary outputs:
 
 ## Installation
 
-Install this repository under your Codex skills directory as `cv-market-learning-planner`.
+Install this repository into a skills/plugins directory that your agent runtime can load from, using the folder name `cv-market-learning-planner`.
 
-Typical Windows path:
+Example (Windows):
 
 ```powershell
-cd <codex-home>\skills
+cd <agent-home>\skills
 git clone https://github.com/sangowu/cv-market-learning-planner.git cv-market-learning-planner
 ```
 
-Typical macOS/Linux path:
+Example (macOS/Linux):
 
 ```bash
-cd ~/.codex/skills
+cd <agent-home>/skills
 git clone https://github.com/sangowu/cv-market-learning-planner.git cv-market-learning-planner
 ```
 
-After installation, start a new Codex session so the skill is loaded.
+After installation, start a new agent session (or reload skills/plugins) so the runtime can discover and load this skill.
 
 ## Natural-Language Trigger
 
