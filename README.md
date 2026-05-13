@@ -1,6 +1,6 @@
 # CV Market Learning Planner
 
-A Codex skill that turns CV evidence plus current market demand into a structured learning workspace:
+A multi-agent compatible skill that turns CV evidence plus current market demand into a structured learning workspace:
 
 - gap analysis artifacts
 - level-based learning plan pages (HTML)
@@ -74,7 +74,22 @@ If auto-trigger does not fire, explicitly mention the skill:
 Use the cv-market-learning-planner skill. Based on <path-to-cv-file> and the current global <target-role> job market, generate an adaptive interview-focused learning plan.
 ```
 
-## Quick Start
+## Quick Start (Natural Language)
+
+After installation, provide:
+
+- `<path-to-cv-file>`
+- `<target-role>`
+
+Then trigger with a single prompt:
+
+```text
+Based on <path-to-cv-file> and the current global <target-role> job market, generate an adaptive interview-focused learning plan.
+```
+
+## Advanced: Scripted Workflow (Optional)
+
+Use this only for maintainer debugging, offline reproduction, or custom pipeline runs.
 
 From this directory:
 
@@ -83,7 +98,7 @@ python scripts/init_learning_workspace.py
 python scripts/run_cycle.py .\learning_workspace .\path\to\cv.docx
 ```
 
-Then have Codex complete:
+Then have your agent complete:
 
 1. `analysis/current/*.json` artifacts
 2. `planning/learning_plan.json`
