@@ -40,8 +40,6 @@ Primary outputs:
 - Python 3.11+ (tested on 3.13)
 - `pytest` for running tests
 
-No OpenAI key is required for deterministic scripts in this skill.
-
 ## Installation
 
 Install this repository under your Codex skills directory as `cv-market-learning-planner`.
@@ -49,7 +47,7 @@ Install this repository under your Codex skills directory as `cv-market-learning
 Typical Windows path:
 
 ```powershell
-cd C:\Users\40568\.codex\skills
+cd <codex-home>\skills
 git clone https://github.com/sangowu/cv-market-learning-planner.git cv-market-learning-planner
 ```
 
