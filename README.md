@@ -60,20 +60,6 @@ git clone https://github.com/sangowu/cv-market-learning-planner.git cv-market-le
 
 After installation, start a new agent session (or reload skills/plugins) so the runtime can discover and load this skill.
 
-## Natural-Language Trigger
-
-After the skill is installed and loaded, users can trigger it directly with natural language, for example:
-
-```text
-Based on <path-to-cv-file> and the current global <target-role> job market, generate an adaptive interview-focused learning plan.
-```
-
-If auto-trigger does not fire, explicitly mention the skill:
-
-```text
-Use the cv-market-learning-planner skill. Based on <path-to-cv-file> and the current global <target-role> job market, generate an adaptive interview-focused learning plan.
-```
-
 ## Quick Start (Natural Language)
 
 After installation, provide:
