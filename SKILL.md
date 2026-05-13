@@ -126,6 +126,10 @@ Directory details and file schemas are in `references/schemas.md`.
 
 - Let the exercise scope come from the gap analysis and level map.
 - First decide the exercise complexity profile for the level, then instantiate the topic from CV evidence and market demand.
+- Infer the learner-facing content language from CV language evidence and user prompt language.
+- Use the strongest CV-supported language as the default output language for learner-facing artifacts when no explicit user language preference is provided.
+- Keep learner-facing language consistent across `planning/learning_plan.json` summaries, exercise prompts, review notes, and rendered plan/report pages for a single generation cycle.
+- If the user explicitly requests a specific output language, follow that request and record the rationale in planning artifacts.
 - For `foundation-gaps` coding exercises, choose the primary language from the language evidence already present in `analysis/current/cv_profile.json`.
 - Within the CV-detected languages, prefer the most foundational and easiest-to-verify language track first rather than the most market-impressive or most engineering-heavy track.
 - Do not introduce a new language for `foundation-gaps` unless the CV lacks any meaningful coding-language evidence.

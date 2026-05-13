@@ -42,6 +42,40 @@ Primary outputs:
 
 No OpenAI key is required for deterministic scripts in this skill.
 
+## Installation
+
+Install this repository under your Codex skills directory as `cv-market-learning-planner`.
+
+Typical Windows path:
+
+```powershell
+cd C:\Users\40568\.codex\skills
+git clone https://github.com/sangowu/cv-market-learning-planner.git cv-market-learning-planner
+```
+
+Typical macOS/Linux path:
+
+```bash
+cd ~/.codex/skills
+git clone https://github.com/sangowu/cv-market-learning-planner.git cv-market-learning-planner
+```
+
+After installation, start a new Codex session so the skill is loaded.
+
+## Natural-Language Trigger
+
+After the skill is installed and loaded, users can trigger it directly with natural language, for example:
+
+```text
+Based on <path-to-cv-file> and the current global <target-role> job market, generate an adaptive interview-focused learning plan.
+```
+
+If auto-trigger does not fire, explicitly mention the skill:
+
+```text
+Use the cv-market-learning-planner skill. Based on <path-to-cv-file> and the current global <target-role> job market, generate an adaptive interview-focused learning plan.
+```
+
 ## Quick Start
 
 From this directory:
@@ -79,4 +113,3 @@ python -m pytest -q
 ## Repository Hygiene
 
 This project ignores Python caches and pytest caches via `.gitignore`.
-
