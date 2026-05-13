@@ -73,6 +73,12 @@ Then trigger with a single prompt:
 Based on <path-to-cv-file> and the current global <target-role> job market, generate an adaptive interview-focused learning plan.
 ```
 
+Advanced prompt example:
+
+```text
+Please generate an interview-focused adaptive learning plan based on <cv-placeholder> and the current global <target-role-placeholder> job market for <target-seniority>. Include coding exercises, debugging exercises, system design/project defense exercises, and progress tracking. Coding difficulty should progress from easy to hard by level, with 3 problems per level plus 2 challenge problems (beyond the learner's current level or project depth, but still partially knowledge-related). For coding exercises, include prerequisite knowledge explanations and hints to support solving and review.
+```
+
 ## Advanced: Scripted Workflow (Optional)
 
 Use this only for maintainer debugging, offline reproduction, or custom pipeline runs.
