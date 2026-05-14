@@ -166,30 +166,6 @@ def validate_coding_responsibility(exercise: dict) -> None:
         )
 
 
-def validate_foundation_prerequisites(exercise: dict) -> None:
-    if exercise.get("level_id") != "foundation-gaps" or exercise.get("mode") != "coding":
-        return
-    if exercise.get("prerequisite_support_mode") != "teach":
-        raise ValueError(
-            f"Exercise `{exercise['id']}` in level `foundation-gaps` must use `prerequisite_support_mode=teach`."
-        )
-    units = exercise.get("prerequisite_units")
-    if not isinstance(units, list) or not units:
-        raise ValueError(
-            f"Exercise `{exercise['id']}` in level `foundation-gaps` must include at least one prerequisite unit."
-        )
-    required_fields = ("concept", "why_it_matters_here", "quick_explanation", "self_check")
-    for idx, unit in enumerate(units, start=1):
-        if not isinstance(unit, dict):
-            raise ValueError(
-                f"Exercise `{exercise['id']}` prerequisite unit #{idx} must be an object."
-            )
-        missing = [field for field in required_fields if not str(unit.get(field, "")).strip()]
-        if missing:
-            raise ValueError(
-                f"Exercise `{exercise['id']}` prerequisite unit #{idx} missing required fields: {', '.join(missing)}"
-            )
-
 
 def validate_foundation_language(exercise: dict, cv_language_evidence: list[str]) -> None:
     if exercise.get("level_id") != "foundation-gaps" or exercise.get("mode") != "coding":
@@ -205,6 +181,27 @@ def validate_foundation_language(exercise: dict, cv_language_evidence: list[str]
             f"Exercise `{exercise['id']}` language_focus `{exercise.get('language_focus')}` is not aligned with CV language evidence. "
             f"Top CV evidence languages: {top_candidates}"
         )
+
+
+def validate_leetcode_style(exercise: dict) -> None:
+    if exercise.get("mode") != "coding" or exercise.get("style") != "leetcode":
+        return
+    required = ["title", "problem", "function_signature", "starter_code"]
+    missing = [field for field in required if not str(exercise.get(field, "")).strip()]
+    if missing:
+        raise ValueError(
+            f"Exercise `{exercise['id']}` is missing LeetCode-style fields: {', '.join(missing)}"
+        )
+    for field in ["topics", "examples", "constraints", "tests", "hints"]:
+        value = exercise.get(field)
+        if value is None:
+            exercise[field] = []
+            continue
+        if not isinstance(value, list):
+            raise ValueError(f"Exercise `{exercise['id']}` field `{field}` must be a list.")
+    expected_complexity = exercise.get("expected_complexity", {})
+    if expected_complexity and not isinstance(expected_complexity, dict):
+        raise ValueError(f"Exercise `{exercise['id']}` field `expected_complexity` must be an object.")
 
 
 def validate_live_coding_policy(exercise: dict) -> None:
@@ -360,40 +357,6 @@ def starter_extension(exercise: dict) -> str:
     return "py"
 
 
-def render_prerequisite_units_text(exercise: dict, prefix: str = "- ") -> str:
-    units = exercise.get("prerequisite_units", [])
-    if units:
-        sections = []
-        for unit in units:
-            lines = [
-                f"{prefix}Concept: {unit.get('concept', '')}",
-                f"{prefix}Why it matters: {unit.get('why_it_matters_here', '')}",
-                f"{prefix}Quick explanation: {unit.get('quick_explanation', '')}",
-                f"{prefix}Tiny example: {unit.get('tiny_example', '')}",
-                f"{prefix}Self-check: {unit.get('self_check', '')}",
-            ]
-            sections.append("\n".join(lines))
-        return "\n\n".join(sections)
-    prerequisites = exercise.get("prerequisites", [])
-    return "\n".join(f"{prefix}{item}" for item in prerequisites) or f"{prefix}none"
-
-
-def render_prerequisite_units_markdown(exercise: dict) -> str:
-    units = exercise.get("prerequisite_units", [])
-    if units:
-        sections = []
-        for idx, unit in enumerate(units, start=1):
-            sections.append(
-                f"### {idx}. {unit.get('concept', 'Prerequisite')}\n"
-                f"- Why it matters: {unit.get('why_it_matters_here', '')}\n"
-                f"- Quick explanation: {unit.get('quick_explanation', '')}\n"
-                f"- Tiny example: {unit.get('tiny_example', '')}\n"
-                f"- Self-check: {unit.get('self_check', '')}"
-            )
-        return "\n\n".join(sections)
-    prerequisites = exercise.get("prerequisites", [])
-    return "\n".join(f"- {item}" for item in prerequisites) or "- none"
-
 
 def render_lines(items: list[str], fallback: str, prefix: str = "- ") -> str:
     if items:
@@ -442,6 +405,43 @@ def coding_spec_sections(exercise: dict) -> dict:
     }
 
 
+def render_leetcode_block(exercise: dict) -> str:
+    if exercise.get("style") != "leetcode":
+        return ""
+    topics = ", ".join(str(item) for item in exercise.get("topics", []) if str(item).strip()) or "general"
+    examples = exercise.get("examples", [])
+    example_lines = []
+    for idx, example in enumerate(examples, start=1):
+        if isinstance(example, dict):
+            example_lines.append(f"Example {idx}:\nInput: {example.get('input', '')}\nOutput: {example.get('output', '')}")
+        else:
+            example_lines.append(f"Example {idx}: {example}")
+    constraints = "\n".join(f"- {item}" for item in exercise.get("constraints", []) if str(item).strip()) or "- none"
+    hints = "\n".join(f"- {item}" for item in exercise.get("hints", []) if str(item).strip()) or "- none"
+    complexity = exercise.get("expected_complexity", {})
+    if isinstance(complexity, dict) and complexity:
+        complexity_text = "\n".join(f"- {key}: {value}" for key, value in complexity.items())
+    else:
+        complexity_text = "- not specified"
+    return (
+        "LeetCode Style\n"
+        f"Difficulty: {exercise.get('difficulty', 'easy')}\n"
+        f"Topics: {topics}\n\n"
+        "Problem Statement:\n"
+        f"{exercise.get('problem', exercise.get('prompt', ''))}\n\n"
+        "Examples:\n"
+        f"{chr(10).join(example_lines) or 'No examples provided.'}\n\n"
+        "Constraints:\n"
+        f"{constraints}\n\n"
+        "Function Signature:\n"
+        f"{exercise.get('function_signature', '')}\n\n"
+        "Expected Complexity:\n"
+        f"{complexity_text}\n\n"
+        "Hints:\n"
+        f"{hints}\n\n"
+    )
+
+
 def build_code_header(exercise: dict) -> str:
     deliverables = "\n".join(f"- {item}" for item in exercise.get("deliverables", [])) or "- Complete the task."
     profile_lines = "\n".join(
@@ -450,14 +450,16 @@ def build_code_header(exercise: dict) -> str:
     objective_lines = "\n".join(
         f"- {item}" for item in exercise.get("learning_objectives", [])
     ) or "- pending"
-    prerequisite_block = render_prerequisite_units_text(exercise)
     spec = coding_spec_sections(exercise)
+    leetcode_block = render_leetcode_block(exercise)
     return (
         '"""\n'
         f"Title: {exercise['title']}\n"
         f"Level: {exercise['level_id']}\n"
         f"Mode: {exercise.get('mode', 'coding')}\n"
         f"Type: {exercise.get('type', 'exercise')}\n"
+        f"Source: {exercise.get('source', 'plan')}\n"
+        f"Style: {exercise.get('style', 'exercise')}\n"
         f"Support Level: {exercise.get('support_level', '')}\n\n"
         f"Language Focus: {exercise.get('language_focus', '')}\n\n"
         f"Implementation Target: {exercise.get('implementation_target', '')}\n"
@@ -472,12 +474,7 @@ def build_code_header(exercise: dict) -> str:
         f"{exercise.get('language_selection_rationale', '')}\n\n"
         "Learning Objectives:\n"
         f"{objective_lines}\n\n"
-        "Prerequisite Support Mode:\n"
-        f"{exercise.get('prerequisite_support_mode', '')}\n\n"
-        "Readiness Expectation:\n"
-        f"{exercise.get('readiness_expectation', '')}\n\n"
-        "Prerequisites:\n"
-        f"{prerequisite_block}\n\n"
+        f"{leetcode_block}"
         "Complexity Profile:\n"
         f"{profile_lines}\n\n"
         "Verification Flow:\n"
@@ -497,10 +494,9 @@ def build_code_header(exercise: dict) -> str:
         "Constraints / Hints:\n"
         "- Work from the provided evidence and verification target.\n"
         "- Keep the implementation narrow and testable.\n"
-        "- Prefer explicit trade-offs over hidden complexity.\n\n"
-        f"{spec['constraints']}\n\n"
         "- Tests are pre-generated and visible.\n"
         "- Do not edit the tests unless the exercise explicitly says it is a test-design exercise.\n\n"
+        f"{spec['constraints']}\n\n"
         "Deliverables:\n"
         f"{deliverables}\n\n"
         "Evaluation Method:\n"
@@ -514,8 +510,6 @@ def build_code_header(exercise: dict) -> str:
         f"{spec['acceptance_criteria']}\n"
         '"""\n\n'
     )
-
-
 def build_sql_header(exercise: dict) -> str:
     deliverables = "\n".join(f"-- - {item}" for item in exercise.get("deliverables", [])) or "-- - Complete the task."
     profile_lines = "\n".join(
@@ -524,12 +518,13 @@ def build_sql_header(exercise: dict) -> str:
     objective_lines = "\n".join(
         f"-- - {item}" for item in exercise.get("learning_objectives", [])
     ) or "-- - pending"
-    prerequisite_block = render_prerequisite_units_text(exercise, prefix="-- - ")
     return (
         f"-- Title: {exercise['title']}\n"
         f"-- Level: {exercise['level_id']}\n"
         f"-- Mode: {exercise.get('mode', 'coding')}\n"
         f"-- Type: {exercise.get('type', 'exercise')}\n"
+        f"-- Source: {exercise.get('source', 'plan')}\n"
+        f"-- Style: {exercise.get('style', 'exercise')}\n"
         f"-- Support Level: {exercise.get('support_level', '')}\n"
         f"-- Language Focus: {exercise.get('language_focus', '')}\n"
         f"-- Implementation Target: {exercise.get('implementation_target', '')}\n"
@@ -540,32 +535,17 @@ def build_sql_header(exercise: dict) -> str:
         "-- Training Goal:\n"
         f"-- {exercise.get('summary', '')}\n"
         "--\n"
-        "-- Why This Fits The Level:\n"
-        f"-- {exercise.get('fit_rationale', '')}\n"
-        "--\n"
-        "-- Language Selection Rationale:\n"
-        f"-- {exercise.get('language_selection_rationale', '')}\n"
+        "-- Problem Statement:\n"
+        f"-- {exercise.get('problem', exercise.get('prompt', ''))}\n"
         "--\n"
         "-- Learning Objectives:\n"
         f"{objective_lines}\n"
-        "--\n"
-        "-- Prerequisite Support Mode:\n"
-        f"-- {exercise.get('prerequisite_support_mode', '')}\n"
-        "--\n"
-        "-- Readiness Expectation:\n"
-        f"-- {exercise.get('readiness_expectation', '')}\n"
-        "--\n"
-        "-- Prerequisites:\n"
-        f"{prerequisite_block}\n"
         "--\n"
         "-- Complexity Profile:\n"
         f"{profile_lines}\n"
         "--\n"
         "-- Verification Flow:\n"
         f"{chr(10).join(f'-- - {step}' for step in exercise.get('verification_flow', [])) or '-- - pending'}\n"
-        "--\n"
-        "-- Task:\n"
-        f"-- {exercise.get('prompt', '')}\n"
         "--\n"
         "-- Deliverables:\n"
         f"{deliverables}\n"
@@ -579,8 +559,6 @@ def build_sql_header(exercise: dict) -> str:
         "-- Verification:\n"
         f"-- {exercise.get('verification', '')}\n\n"
     )
-
-
 def build_test_header(exercise: dict) -> str:
     return (
         '"""\n'
@@ -598,17 +576,39 @@ def render_prompt(exercise: dict) -> str:
     objective_lines = "\n".join(
         f"- {item}" for item in exercise.get("learning_objectives", [])
     ) or "- pending"
-    prerequisite_lines = render_prerequisite_units_markdown(exercise)
     spec = coding_spec_sections(exercise) if exercise.get("mode") == "coding" else None
     coding_details = ""
     if spec:
+        leetcode = ""
+        if exercise.get("style") == "leetcode":
+            topics = ", ".join(str(item) for item in exercise.get("topics", []) if str(item).strip()) or "general"
+            examples = []
+            for idx, example in enumerate(exercise.get("examples", []), start=1):
+                if isinstance(example, dict):
+                    examples.append(f"### Example {idx}\nInput: `{example.get('input', '')}`\n\nOutput: `{example.get('output', '')}`")
+                else:
+                    examples.append(f"### Example {idx}\n{example}")
+            constraints = "\n".join(f"- {item}" for item in exercise.get("constraints", []) if str(item).strip()) or "- none"
+            hints = "\n".join(f"- {item}" for item in exercise.get("hints", []) if str(item).strip()) or "- none"
+            complexity = exercise.get("expected_complexity", {})
+            complexity_text = "\n".join(f"- {key}: {value}" for key, value in complexity.items()) if isinstance(complexity, dict) and complexity else "- not specified"
+            leetcode = (
+                f"\n## Difficulty\n{exercise.get('difficulty', 'easy')}\n\n"
+                f"## Topics\n{topics}\n\n"
+                f"## Problem Statement\n{exercise.get('problem', exercise.get('prompt', ''))}\n\n"
+                f"## Examples\n{chr(10).join(examples) or 'No examples provided.'}\n\n"
+                f"## Constraints\n{constraints}\n\n"
+                f"## Function Signature\n{exercise.get('function_signature', '')}\n\n"
+                f"## Expected Complexity\n{complexity_text}\n\n"
+                f"## Hints\n{hints}\n\n"
+            )
         coding_details = (
-            f"\n## Function Contract\n{spec['function_contract']}\n\n"
+            f"{leetcode}"
+            f"## Function Contract\n{spec['function_contract']}\n\n"
             f"## Input Schema\n{spec['input_schema']}\n\n"
             f"## Output Schema\n{spec['output_schema']}\n\n"
             f"## Metric Definitions\n{spec['metric_definitions']}\n\n"
             f"## Edge Cases\n{spec['edge_cases']}\n\n"
-            f"## Constraints\n{spec['constraints']}\n\n"
             f"## Acceptance Criteria\n{spec['acceptance_criteria']}\n"
         )
     return (
@@ -616,6 +616,8 @@ def render_prompt(exercise: dict) -> str:
         f"## Level\n{exercise['level_id']}\n\n"
         f"## Mode\n{exercise.get('mode', 'coding')}\n\n"
         f"## Type\n{exercise.get('type', 'exercise')}\n\n"
+        f"## Source\n{exercise.get('source', 'plan')}\n\n"
+        f"## Style\n{exercise.get('style', 'exercise')}\n\n"
         f"## Language Focus\n{exercise.get('language_focus', '')}\n\n"
         f"## Implementation Target\n{exercise.get('implementation_target', '')}\n\n"
         f"## User Responsibility\n{exercise.get('user_responsibility', '')}\n\n"
@@ -625,9 +627,6 @@ def render_prompt(exercise: dict) -> str:
         f"## Why This Fits The Level\n{exercise.get('fit_rationale', '')}\n\n"
         f"## Language Selection Rationale\n{exercise.get('language_selection_rationale', '')}\n\n"
         f"## Learning Objectives\n{objective_lines}\n\n"
-        f"## Prerequisite Support Mode\n{exercise.get('prerequisite_support_mode', '')}\n\n"
-        f"## Readiness Expectation\n{exercise.get('readiness_expectation', '')}\n\n"
-        f"## Prerequisites\n{prerequisite_lines}\n\n"
         f"## Complexity Profile\n{profile_lines}\n\n"
         f"## Prompt\n{exercise.get('prompt', '')}\n\n"
         f"{coding_details}"
@@ -638,8 +637,6 @@ def render_prompt(exercise: dict) -> str:
         f"## Verification\n{exercise.get('verification', '')}\n\n"
         f"## Deliverables\n{deliverables}\n"
     )
-
-
 def render_rubric(exercise: dict) -> str:
     profile_lines = "\n".join(
         f"- {key}: {value}" for key, value in exercise.get("complexity_profile", {}).items()
@@ -652,8 +649,6 @@ def render_rubric(exercise: dict) -> str:
         f"- User responsibility: {exercise.get('user_responsibility', '')}\n"
         f"- Test strategy: {exercise.get('test_strategy', '')}\n"
         f"- Test edit policy: {exercise.get('test_edit_policy', '')}\n"
-        f"- Prerequisite support mode: {exercise.get('prerequisite_support_mode', '')}\n"
-        f"- Readiness expectation: {exercise.get('readiness_expectation', '')}\n"
         f"- Evaluation method: {exercise.get('evaluation_method', '')}\n"
         f"- Expected output: {exercise.get('expected_output_kind', '')}\n"
         f"- Verification target: {exercise.get('verification', '')}\n"
@@ -662,13 +657,33 @@ def render_rubric(exercise: dict) -> str:
 
 
 def render_starter(exercise: dict) -> str:
-    base = STARTER_BY_TYPE.get(exercise.get("type", "python"), "# Implement the exercise here.\n")
+    base = exercise.get("starter_code") or STARTER_BY_TYPE.get(exercise.get("type", "python"), "# Implement the exercise here.\n")
     ext = starter_extension(exercise)
     if ext == "sql":
         return build_sql_header(exercise) + base
     if ext == "py":
         return build_code_header(exercise) + base
     return base
+
+
+def render_generated_tests(exercise: dict) -> str:
+    tests = exercise.get("tests", [])
+    signature = str(exercise.get("function_signature", ""))
+    match = re.search(r"def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(", signature)
+    function_name = match.group(1) if match else "solve"
+    if not tests:
+        return TEST_BY_TYPE.get(exercise.get("type", "python"), "def test_placeholder() -> None:\n    assert True\n")
+    lines = ["import pytest\n\n", "from starter import " + function_name + "\n\n"]
+    for idx, case in enumerate(tests, start=1):
+        if not isinstance(case, dict):
+            continue
+        args = case.get("input", [])
+        expected = case.get("expected")
+        if not isinstance(args, list):
+            args = [args]
+        lines.append(f"def test_case_{idx}() -> None:\n")
+        lines.append(f"    assert {function_name}(*{args!r}) == {expected!r}\n\n")
+    return "".join(lines) if len(lines) > 2 else TEST_BY_TYPE.get(exercise.get("type", "python"), "def test_placeholder() -> None:\n    assert True\n")
 
 
 def build_resources(exercise: dict, exercise_dir: Path, workspace: Path) -> list[dict]:
@@ -685,7 +700,7 @@ def build_resources(exercise: dict, exercise_dir: Path, workspace: Path) -> list
         test_name = exercise.get("test_file", f"test_{slugify(exercise['id'])}.py")
         test_rel = Path("exercises") / level_dir_name / exercise["id"] / test_name
         write_text(exercise_dir / starter_name, render_starter(exercise))
-        write_text(exercise_dir / test_name, build_test_header(exercise) + TEST_BY_TYPE.get(exercise.get("type", "python"), "def test_placeholder() -> None:\n    assert True\n"))
+        write_text(exercise_dir / test_name, build_test_header(exercise) + render_generated_tests(exercise))
         resources.extend(
             [
                 {"label": "Starter", "kind": "starter", "path": starter_rel.as_posix()},
@@ -720,14 +735,21 @@ def normalize_exercise(exercise: dict) -> dict:
         "complexity_profile",
         base_complexity,
     )
+    normalized.setdefault("source", "plan")
+    normalized.setdefault("category", normalized.get("track", normalized.get("mode", "exercise")))
+    normalized.setdefault("style", "leetcode" if normalized.get("mode") == "coding" else "project_drill")
+    normalized.setdefault("difficulty", "easy")
+    normalized.setdefault("topics", [])
+    normalized.setdefault("examples", [])
+    normalized.setdefault("constraints", [])
+    normalized.setdefault("hints", [])
+    normalized.setdefault("tests", [])
+    normalized.setdefault("expected_complexity", {})
     normalized.setdefault("learning_objectives", [])
-    normalized.setdefault("prerequisites", [])
-    normalized.setdefault("prerequisite_units", [])
-    normalized.setdefault(
-        "prerequisite_support_mode",
-        DEFAULT_PREREQ_SUPPORT_BY_LEVEL.get(normalized["level_id"], "remind"),
-    )
-    normalized.setdefault("readiness_expectation", "Pending readiness expectation from Codex.")
+    if normalized.get("mode") == "coding" and normalized.get("style") == "leetcode":
+        normalized.setdefault("problem", normalized.get("prompt", ""))
+        normalized.setdefault("function_signature", "def solve() -> object:")
+        normalized.setdefault("starter_code", STARTER_BY_TYPE.get(normalized.get("type", "python"), STARTER_BY_TYPE["python"]))
     normalized.setdefault("fit_rationale", "Pending fit rationale from Codex.")
     normalized.setdefault("implementation_target", f"starter.{starter_extension(normalized)}")
     normalized.setdefault("user_responsibility", "implementation-only")
@@ -788,8 +810,8 @@ def main() -> int:
     for exercise in catalog.get("exercises", []):
         normalized = normalize_exercise(exercise)
         validate_level_fit(normalized)
-        validate_foundation_prerequisites(normalized)
         validate_foundation_language(normalized, cv_language_evidence)
+        validate_leetcode_style(normalized)
         validate_coding_responsibility(normalized)
         validate_live_coding_policy(normalized)
         level_dir = exercises_root / f"level-{normalized['level_id']}"

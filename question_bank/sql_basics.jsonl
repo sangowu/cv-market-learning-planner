@@ -1,0 +1,2 @@
+{"id":"sql-group-count-001","source":"seeded","category":"sql_basics","style":"leetcode","difficulty":"easy","title":"Count Rows By Status","topics":["group_by","aggregation"],"problem":"Given a table of tasks with a status column, write a query that returns each status and its count.","function_signature":"-- SQL query","starter_code":"-- Write your SQL query here.
+","examples":[{"input":"tasks(id, status)","output":"status, count"}],"constraints":["Use GROUP BY."],"hints":["COUNT(*) counts rows per group."],"expected_complexity":{"time":"O(n)","space":"O(k)"},"tests":[]}

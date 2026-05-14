@@ -76,7 +76,7 @@ Based on <path-to-cv-file> and the current global <target-role> job market, gene
 Advanced prompt example:
 
 ```text
-Please generate an interview-focused adaptive learning plan based on <cv-placeholder> and the current global <target-role-placeholder> job market for <target-seniority>. Include coding exercises, debugging exercises, system design/project defense exercises, and progress tracking. Coding difficulty should progress from easy to hard by level, with 3 problems per level plus 2 challenge problems (beyond the learner's current level or project depth, but still partially knowledge-related). For coding exercises, include prerequisite knowledge explanations and hints to support solving and review.
+Please generate an interview-focused adaptive learning plan based on <cv-placeholder>, <project-path-placeholder>, and the current global <target-role-placeholder> job market for <target-seniority>. Include LeetCode-style coding exercises, debugging exercises, project-defense/system-design exercises, daily practice, interview simulation, and progress tracking. Coding tasks should include difficulty, topics, problem statement, examples, constraints, function signature, starter code, tests, hints, and expected complexity. Do not create a separate prerequisite teaching module; if a task needs too much prior explanation, simplify or split it.
 ```
 
 ## Advanced: Scripted Workflow (Optional)
@@ -101,6 +101,21 @@ Render pages and scaffold exercises:
 ```powershell
 python scripts/generate_exercise_assets.py .\learning_workspace\planning\exercise_catalog.json .\learning_workspace
 python scripts/render_plan_pages.py .\learning_workspace\planning\learning_plan.json .\learning_workspace\planning\exercise_catalog.json .\learning_workspace\analysis\current\level_map.json .\learning_workspace\plan
+```
+
+
+## Daily Practice
+
+Daily tasks are generated from `planning/exercise_catalog.json`; they are not a separate learning plan. Use them as a low-pressure daily queue that may mix:
+
+- plan-linked project or interview tasks
+- Python/SQL fundamentals from `question_bank/`
+- classic LeetCode-style algorithm questions
+
+```powershell
+python scripts/daily_status.py .\learning_workspace
+python scripts/generate_daily_tasks.py .\learning_workspace --count 3
+python scripts/mark_daily_task.py .\learning_workspace <task-id> --status completed
 ```
 
 ## Exercise Quota (Per Level)

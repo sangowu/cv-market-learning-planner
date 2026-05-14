@@ -37,6 +37,9 @@ def write_workspace_wrappers(root: Path) -> None:
             "  'render-pages' = 'render_plan_pages.py'\n"
             "  'run-cycle' = 'run_cycle.py'\n"
             "  'validate-generation' = 'validate_generation.py'\n"
+            "  'daily-status' = 'daily_status.py'\n"
+            "  'generate-daily' = 'generate_daily_tasks.py'\n"
+            "  'mark-daily' = 'mark_daily_task.py'\n"
             "}\n\n"
             "if (-not $toolMap.ContainsKey($Tool)) {\n"
             "  throw \"Unknown tool '$Tool'. Use one of: $($toolMap.Keys -join ', ')\"\n"
@@ -74,6 +77,7 @@ def main() -> int:
     exercises_dir = root / "exercises"
     progress_dir = root / "progress"
     reports_dir = root / "reports"
+    daily_dir = root / "daily"
 
     for path in [
         root / "input",
@@ -84,6 +88,7 @@ def main() -> int:
         exercises_dir,
         progress_dir,
         reports_dir,
+        daily_dir,
     ]:
         ensure_dir(path)
 
@@ -98,6 +103,8 @@ def main() -> int:
     write_json_if_missing(planning_dir / "learning_plan.json", default_learning_plan())
     write_json_if_missing(planning_dir / "exercise_catalog.json", default_exercise_catalog())
     write_json_if_missing(planning_dir / "progress_map.json", default_progress_map())
+    write_json_if_missing(daily_dir / "current.json", {"date": None, "status": "not_generated", "tasks": []})
+    write_text_if_missing(daily_dir / "history.jsonl", "")
 
     write_text_if_missing(progress_dir / "submissions.jsonl", "")
     write_text_if_missing(progress_dir / "reviews.jsonl", "")

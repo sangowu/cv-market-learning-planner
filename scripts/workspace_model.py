@@ -197,6 +197,8 @@ def default_stats() -> dict:
         "total_submissions": 0,
         "total_reviews": 0,
         "completed_exercises": 0,
+        "daily_tasks_completed": 0,
+        "latest_daily_date": None,
         "latest_exercise": None,
         "last_review_status": None,
         "common_issue_tags": [],

@@ -162,6 +162,19 @@ def build_catalog() -> dict:
                 "title": "Repair a brittle ETL transform",
                 "summary": "Practice reliable Python data shaping with tests.",
                 "prompt": "Implement normalization and validation for inconsistent records.",
+                "source": "foundation",
+                "category": "python_basics",
+                "style": "leetcode",
+                "difficulty": "easy",
+                "topics": ["hash_map", "data-cleaning"],
+                "problem": "Given records with optional category values, normalize category names and count valid records by category.",
+                "examples": [{"input": "[{category: ' AI '}, {category: 'ai'}]", "output": "{'ai': 2}"}],
+                "constraints": ["0 <= len(records) <= 10000"],
+                "function_signature": "def normalize_counts(records: list[dict]) -> dict[str, int]:",
+                "starter_code": "def normalize_counts(records: list[dict]) -> dict[str, int]:\n    pass\n",
+                "tests": [{"input": [[{"category": " AI "}, {"category": "ai"}]], "expected": {"ai": 2}}],
+                "hints": ["Normalize strings before counting."],
+                "expected_complexity": {"time": "O(n)", "space": "O(k)"},
                 "resources": [],
                 "implementation_target": "starter.py",
                 "user_responsibility": "implementation-only",
@@ -184,18 +197,6 @@ def build_catalog() -> dict:
                     "delivery_scope": "narrow",
                 },
                 "learning_objectives": ["dict grouping", "edge-case handling"],
-                "prerequisites": ["basic Python collections"],
-                "prerequisite_units": [
-                    {
-                        "concept": "Python sets",
-                        "why_it_matters_here": "The task needs fast deduplication and membership checks.",
-                        "quick_explanation": "A set stores unique items and supports average O(1) membership checks in typical use.",
-                        "tiny_example": "required = {'python', 'sql'}",
-                        "self_check": "Why is a set a better fit than repeatedly scanning a list here?",
-                    }
-                ],
-                "prerequisite_support_mode": "teach",
-                "readiness_expectation": "The learner should be able to trace a small set-based example by hand before coding.",
                 "fit_rationale": "Single-function exercise with direct verification and high scaffolding.",
                 "evaluation_method": "Run the generated tests and explain the edge cases.",
                 "expected_output_kind": "python-module",
@@ -211,6 +212,19 @@ def build_catalog() -> dict:
                 "title": "Stabilize a flaky service path",
                 "summary": "Find the failure mode and codify the fix with regression coverage.",
                 "prompt": "Document the failure and implement a narrow corrective change.",
+                "source": "plan",
+                "category": "project_takeover",
+                "style": "leetcode",
+                "difficulty": "medium",
+                "topics": ["debugging", "observability"],
+                "problem": "Given a brittle status-normalization helper, repair it without changing its public contract.",
+                "examples": [{"input": "' Failed '", "output": "'failed'"}],
+                "constraints": ["Keep behavior deterministic."],
+                "function_signature": "def normalize_status(value: str | None) -> str:",
+                "starter_code": "def normalize_status(value: str | None) -> str:\n    pass\n",
+                "tests": [{"input": [" Failed "], "expected": "failed"}],
+                "hints": ["Handle None before string operations."],
+                "expected_complexity": {"time": "O(n)", "space": "O(1)"},
                 "resources": [],
                 "implementation_target": "starter.py",
                 "user_responsibility": "implementation-only",
@@ -233,9 +247,6 @@ def build_catalog() -> dict:
                     "delivery_scope": "broad",
                 },
                 "learning_objectives": ["trace a failure mode", "add regression coverage"],
-                "prerequisites": ["basic testing workflow"],
-                "prerequisite_support_mode": "remind",
-                "readiness_expectation": "The learner should already know how to run and read a simple failing test.",
                 "fit_rationale": "Requires diagnosis plus verification rather than just first-pass implementation.",
                 "evaluation_method": "Explain the root cause and show how the fix is verified.",
                 "expected_output_kind": "python-module",
@@ -273,9 +284,6 @@ def build_catalog() -> dict:
                     "delivery_scope": "timed",
                 },
                 "learning_objectives": ["structure a debugging explanation", "defend trade-offs aloud"],
-                "prerequisites": ["basic debugging vocabulary"],
-                "prerequisite_support_mode": "assume",
-                "readiness_expectation": "The learner should already be able to explain a simple bug investigation without tutorial support.",
                 "fit_rationale": "The emphasis is explanation under interview pressure rather than system breadth.",
                 "evaluation_method": "Self-review against the prompt and follow-up questions.",
                 "expected_output_kind": "written-response",
@@ -375,8 +383,9 @@ def test_generate_assets_and_render_pages(tmp_path: Path) -> None:
     assert "Test Strategy: system-generated-visible" in starter_text
     assert "Test Edit Policy: do-not-edit" in starter_text
     assert "Tests are pre-generated and visible." in starter_text
-    assert "Prerequisite Support Mode:" in starter_text
-    assert "Readiness Expectation:" in starter_text
+    assert "LeetCode Style" in starter_text
+    assert "Function Signature:" in starter_text
+    assert "Expected Complexity:" in starter_text
     assert "Training Goal:" in starter_text
     assert "Complexity Profile:" in starter_text
     assert "Why This Fits The Level:" in starter_text
@@ -418,7 +427,8 @@ def test_generate_assets_and_render_pages(tmp_path: Path) -> None:
     assert updated_catalog["exercises"][0]["resources"], "generator should resolve resource links"
     assert updated_catalog["exercises"][0]["complexity_profile"]["objective_count"] == "low"
     assert updated_catalog["exercises"][0]["language_focus"] == "python"
-    assert updated_catalog["exercises"][0]["prerequisite_support_mode"] == "teach"
+    assert updated_catalog["exercises"][0]["style"] == "leetcode"
+    assert updated_catalog["exercises"][0]["topics"]
     assert updated_catalog["exercises"][0]["user_responsibility"] == "implementation-only"
     assert updated_catalog["exercises"][0]["test_edit_policy"] == "do-not-edit"
 
@@ -534,13 +544,12 @@ def test_generate_assets_rejects_non_cv_foundation_language(tmp_path: Path) -> N
     assert "is not aligned with CV language evidence" in error_text
 
 
-def test_generate_assets_rejects_missing_foundation_prerequisite_units(tmp_path: Path) -> None:
+def test_generate_assets_rejects_missing_leetcode_fields(tmp_path: Path) -> None:
     workspace = tmp_path / "learning_workspace"
     run_script("init_learning_workspace.py", str(workspace))
 
     invalid_catalog = build_catalog()
-    invalid_catalog["exercises"][0]["prerequisite_support_mode"] = "teach"
-    invalid_catalog["exercises"][0]["prerequisite_units"] = []
+    invalid_catalog["exercises"][0]["function_signature"] = ""
     write_json(
         workspace / "analysis" / "current" / "cv_profile.json",
         {"language_evidence": [{"language": "python", "weight": 0.9}]},
@@ -555,7 +564,8 @@ def test_generate_assets_rejects_missing_foundation_prerequisite_units(tmp_path:
 
     assert result.returncode != 0
     error_text = result.stderr or result.stdout
-    assert "must include at least one prerequisite unit" in error_text
+    assert "missing LeetCode-style fields" in error_text
+    assert "function_signature" in error_text
 
 
 def test_generate_assets_rejects_test_authoring_verification(tmp_path: Path) -> None:
@@ -724,12 +734,19 @@ def test_validate_generation_passes_with_balanced_catalog(tmp_path: Path) -> Non
         prompt_path.write_text(
             "\n".join(
                 [
+                    "## Difficulty",
+                    "## Topics",
+                    "## Problem Statement",
+                    "## Examples",
+                    "## Constraints",
+                    "## Function Signature",
+                    "## Expected Complexity",
+                    "## Hints",
                     "## Function Contract",
                     "## Input Schema",
                     "## Output Schema",
                     "## Metric Definitions",
                     "## Edge Cases",
-                    "## Constraints",
                     "## Acceptance Criteria",
                 ]
             ),
@@ -816,6 +833,30 @@ def test_validate_generation_passes_with_dynamic_level_quota(tmp_path: Path) -> 
     assert "Generation validation passed" in result.stdout
 
 
+
+def test_daily_task_generation_and_marking(tmp_path: Path) -> None:
+    workspace = tmp_path / "learning_workspace"
+    run_script("init_learning_workspace.py", str(workspace))
+    write_json(workspace / "planning" / "exercise_catalog.json", build_catalog())
+
+    result = run_script("daily_status.py", str(workspace))
+    assert "not_generated" in result.stdout
+
+    result = run_script("generate_daily_tasks.py", str(workspace), "low-pressure")
+    assert "Generated" in result.stdout
+
+    current = load_json(workspace / "daily" / "current.json")
+    assert current["tasks"]
+    first = current["tasks"][0]["exercise_id"]
+
+    result = run_script("mark_daily_task.py", str(workspace), first, "done", "completed first task")
+    assert "Marked" in result.stdout
+
+    updated = load_json(workspace / "daily" / "current.json")
+    assert any(task["exercise_id"] == first and task["status"] == "done" for task in updated["tasks"])
+    assert (workspace / "daily" / "history.jsonl").read_text(encoding="utf-8").strip()
+
+
 def test_static_validation_and_docs_consistency() -> None:
     script_paths = sorted(str(path) for path in SCRIPTS_DIR.glob("*.py"))
     env = os.environ.copy()
@@ -849,9 +890,12 @@ def test_static_validation_and_docs_consistency() -> None:
         "complexity_constraints",
         "language_focus",
         "language_selection_rationale",
-        "prerequisite_support_mode",
-        "readiness_expectation",
+        "style",
+        "topics",
+        "function_signature",
+        "expected_complexity",
         "fit_rationale",
+        "daily/current.json",
     ]:
         assert required in skill_md
         assert required in schemas_md or required in interaction_md

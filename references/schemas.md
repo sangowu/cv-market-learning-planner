@@ -181,13 +181,48 @@ Rules:
 {
   "exercises": [
     {
-      "id": "foundation-pipeline-debug",
+      "id": "foundation-two-sum-variant",
       "level_id": "foundation-gaps",
       "mode": "coding",
       "type": "python",
-      "title": "Repair a brittle ETL transform",
-      "summary": "Practice reliable Python data shaping with explicit tests.",
-      "prompt": "Implement the missing normalization and validation behavior.",
+      "source": "question_bank",
+      "category": "algorithm",
+      "style": "leetcode",
+      "difficulty": "easy",
+      "topics": ["array", "hash-map"],
+      "title": "Find Two Matching Skill Scores",
+      "summary": "Practice hash-map lookup with a small deterministic function.",
+      "prompt": "Implement the function and pass the generated tests.",
+      "problem": "Given a list of integer scores and a target score, return the indices of two distinct scores whose sum equals the target. Return the smaller index first. Exactly one valid answer exists.",
+      "examples": [
+        {
+          "input": "scores = [2, 7, 11, 15], target = 9",
+          "output": "[0, 1]"
+        }
+      ],
+      "constraints": [
+        "2 <= len(scores) <= 10000",
+        "-100000 <= scores[i] <= 100000",
+        "Exactly one answer exists",
+        "Do not use third-party libraries"
+      ],
+      "function_signature": "def two_sum(scores: list[int], target: int) -> list[int]:",
+      "starter_code": "def two_sum(scores: list[int], target: int) -> list[int]:\n    raise NotImplementedError",
+      "tests": [
+        {
+          "name": "basic_pair",
+          "call": "two_sum([2, 7, 11, 15], 9)",
+          "expected": [0, 1]
+        }
+      ],
+      "hints": [
+        "Track values you have already seen.",
+        "For each value, check whether target - value was seen before."
+      ],
+      "expected_complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
       "resources": [],
       "implementation_target": "starter.py",
       "user_responsibility": "implementation-only",
@@ -209,19 +244,7 @@ Rules:
         "scaffolding_strength": "high",
         "delivery_scope": "narrow"
       },
-      "learning_objectives": ["dict grouping", "edge-case handling"],
-      "prerequisites": ["basic Python collections"],
-      "prerequisite_units": [
-        {
-          "concept": "Python sets",
-          "why_it_matters_here": "The exercise needs quick deduplication and membership checks.",
-          "quick_explanation": "A set stores unique items and supports average O(1) membership checks for typical cases.",
-          "tiny_example": "required = {'python', 'sql'}",
-          "self_check": "Why is a set a better fit than repeatedly scanning a list for this task?"
-        }
-      ],
-      "prerequisite_support_mode": "teach",
-      "readiness_expectation": "The learner should understand basic collection operations well enough to trace a small example by hand.",
+      "learning_objectives": ["hash-map lookup", "edge-case tracing"],
       "fit_rationale": "Single-function exercise with direct verification and high scaffolding.",
       "evaluation_method": "Run the generated tests and explain the edge cases.",
       "expected_output_kind": "python-module",
@@ -252,15 +275,27 @@ Every exercise object must include:
 - `language_selection_rationale`
 - `complexity_profile`
 - `learning_objectives`
-- `prerequisites`
-- `prerequisite_units`
-- `prerequisite_support_mode`
-- `readiness_expectation`
+- `source`
+- `category`
+- `style`
+- `difficulty`
+- `topics`
 - `fit_rationale`
 - `evaluation_method`
 - `expected_output_kind`
 - `verification`
 - `deliverables`
+
+LeetCode-style coding exercises must also include:
+
+- `problem`
+- `examples`
+- `constraints`
+- `function_signature`
+- `starter_code`
+- `tests`
+- `hints`
+- `expected_complexity`
 
 `complexity_profile` should describe the shape of the task rather than the topic. Recommended keys:
 
@@ -272,6 +307,11 @@ Every exercise object must include:
 - `scaffolding_strength`
 - `delivery_scope`
 
+- `source` should identify where the task came from, such as `plan`, `question_bank`, `market_gap`, `project_gap`, or `generated_then_saved`.
+- `category` should identify the task family, such as `python-basics`, `algorithm`, `sql`, `project-defense`, `debugging`, `system-design`, or `mock-interview`.
+- `style` for normal coding fundamentals and classic algorithm tasks should be `leetcode`.
+- `difficulty` should use `easy`, `medium`, or `hard`.
+- `topics` should be a list of searchable practice tags.
 - `language_focus` should identify the primary implementation language or language-family focus for the exercise.
 - `language_selection_rationale` should explain why that language is the right fit based on CV evidence and current level intent.
 - `implementation_target` should identify the file or code surface the learner is expected to edit.
@@ -279,12 +319,6 @@ Every exercise object must include:
 - `test_strategy` for normal coding exercises should default to `system-generated-visible`.
 - `test_edit_policy` for normal coding exercises should default to `do-not-edit`.
 - `verification_flow` should describe how the learner uses the pre-generated tests to iterate on the implementation.
-- `prerequisite_support_mode` should be one of:
-  - `teach`
-  - `remind`
-  - `assume`
-- `readiness_expectation` should describe the minimum operational understanding required before the learner starts coding.
-- `prerequisite_units` should be used when the prerequisite needs active teaching support rather than a short reminder.
 
 Supported `mode` values:
 
@@ -317,7 +351,7 @@ Resource policy:
 - coding exercises generate `prompt.md`, starter code, tests, and a `submissions/` folder
 - interview exercises generate `prompt.md`, `answer_notes.md`, `review_notes.md`, and a `submissions/` folder
 
-Generated coding starter files must keep a full LeetCode-style header with goal, task, hints, deliverables, evaluation method, expected output, and verification notes.
+Generated coding starter files must keep a full LeetCode-style header with difficulty, topics, problem statement, examples, constraints, function signature, expected complexity, hints, deliverables, evaluation method, expected output, and verification notes.
 
 Default coding exercise responsibility:
 
@@ -328,11 +362,54 @@ Default coding exercise responsibility:
 Exercise generation rule:
 
 - decide the level-fit complexity profile first
-- then instantiate a concrete topic from CV evidence and market demand
+- then instantiate a concrete topic from CV evidence, project evidence, supplied JD evidence, market demand, or the question bank
 - for `foundation-gaps` coding exercises, anchor the task in a language already evidenced in the CV and prefer the most foundational option first
-- decide whether prerequisites should be taught, reminded, or assumed before finalizing the exercise text
+- do not create a separate prerequisite teaching module; if a task needs too much prior explanation, simplify or split it
+- add newly generated reusable foundation, algorithm, or SQL tasks to `question_bank/` before using them as recurring daily practice
 - set coding exercise responsibility fields so testing remains system-generated and learner effort stays focused on implementation
 - reject generation if the exercise profile falls outside the level's `complexity_constraints`
+
+## `daily/current.json`
+
+```json
+{
+  "date": "2026-05-14",
+  "status": "pending",
+  "tasks": [
+    {
+      "id": "daily-20260514-001",
+      "exercise_id": "foundation-two-sum-variant",
+      "title": "Find Two Matching Skill Scores",
+      "category": "algorithm",
+      "difficulty": "easy",
+      "status": "pending",
+      "selected_from": "planning/exercise_catalog.json",
+      "reason": "Keeps hash-map coding fluency active while the main plan focuses on project-defense work."
+    }
+  ]
+}
+```
+
+Daily task rules:
+
+- Daily tasks are selected from `planning/exercise_catalog.json`.
+- Daily tasks may include project-plan tasks, Python/SQL basics, classic algorithm tasks, debugging prompts, or interview simulations.
+- Missed daily tasks should not accumulate indefinitely; regenerate a fresh small set for the current date.
+- Completion changes append to `daily/history.jsonl` and update `progress/stats.json`.
+
+## `question_bank/*.jsonl`
+
+Each JSONL record should be a reusable exercise seed. Coding basics and classic algorithms should follow the same LeetCode-style fields as catalog exercises:
+
+```json
+{"id":"algo-two-sum-easy","category":"algorithm","style":"leetcode","difficulty":"easy","topics":["array","hash-map"],"title":"Two Sum","problem":"Given an integer array nums and an integer target, return indices of the two numbers such that they add up to target.","examples":[{"input":"nums = [2,7,11,15], target = 9","output":"[0,1]"}],"constraints":["2 <= len(nums) <= 10000"],"function_signature":"def two_sum(nums: list[int], target: int) -> list[int]:","starter_code":"def two_sum(nums: list[int], target: int) -> list[int]:\n    raise NotImplementedError","tests":[{"name":"basic","call":"two_sum([2,7,11,15], 9)","expected":[0,1]}],"hints":["Use a hash map."],"expected_complexity":{"time":"O(n)","space":"O(n)"}}
+```
+
+Question bank rules:
+
+- Prefer selecting basics and classic algorithms from the bank before generating new ones.
+- If Codex generates a reusable foundation, SQL, or algorithm problem, append it to the relevant bank with a stable id.
+- The bank stores reusable seeds; `planning/exercise_catalog.json` stores the active plan instances.
 
 ## `planning/progress_map.json`
 
