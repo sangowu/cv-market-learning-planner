@@ -6,7 +6,6 @@ import shutil
 import sys
 from pathlib import Path
 
-
 ASSET_DIR = Path(__file__).resolve().parent.parent / "assets" / "roadmap-ui"
 
 

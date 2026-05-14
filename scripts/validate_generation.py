@@ -44,6 +44,17 @@ def group_by_level(exercises: list[dict]) -> dict[str, list[dict]]:
     return grouped
 
 
+def build_level_lookup(level_map: dict) -> dict[str, dict]:
+    levels = level_map.get("levels", []) if isinstance(level_map, dict) else []
+    if not isinstance(levels, list):
+        return {}
+    return {
+        level.get("id"): level
+        for level in levels
+        if isinstance(level, dict) and isinstance(level.get("id"), str)
+    }
+
+
 def actual_mode_mix(exercises: list[dict]) -> dict[str, float]:
     total = len(exercises)
     if total == 0:
@@ -53,6 +64,34 @@ def actual_mode_mix(exercises: list[dict]) -> dict[str, float]:
         track = str(ex.get("track", ex.get("mode", "unknown"))).strip().lower()
         counts[track] = counts.get(track, 0) + 1
     return {k: v / total for k, v in counts.items()}
+
+
+def level_difficulty_score(level: dict) -> float:
+    profile = level.get("complexity_profile", {}) if isinstance(level, dict) else {}
+    values = [RANK_3.get(str(profile.get(dim, "")).lower(), 0) for dim in DEFAULT_MONOTONIC_DIMS]
+    return sum(values) / max(len(values), 1)
+
+
+def build_dynamic_total_quota(
+    active_levels: list[str],
+    level_lookup: dict[str, dict],
+    min_total: int,
+    max_total: int,
+) -> dict[str, int]:
+    if not active_levels:
+        return {}
+    if min_total > max_total:
+        min_total, max_total = max_total, min_total
+    scored = [(level_id, level_difficulty_score(level_lookup.get(level_id, {}))) for level_id in active_levels]
+    scored.sort(key=lambda item: item[1], reverse=True)
+    if len(scored) == 1:
+        return {scored[0][0]: max_total}
+    span = max_total - min_total
+    result: dict[str, int] = {}
+    for idx, (level_id, _) in enumerate(scored):
+        ratio = (len(scored) - 1 - idx) / (len(scored) - 1)
+        result[level_id] = int(round(min_total + span * ratio))
+    return result
 
 
 def validate_required_files(workspace: Path) -> None:
@@ -69,24 +108,34 @@ def validate_required_files(workspace: Path) -> None:
     require(not missing, f"Missing required generation files: {', '.join(missing)}")
 
 
-def validate_level_quota(exercises: list[dict], active_levels: list[str], mode_decision: dict) -> None:
+def validate_level_quota(exercises: list[dict], active_levels: list[str], mode_decision: dict, level_lookup: dict[str, dict]) -> None:
     quota = mode_decision.get("level_quota", {}) if isinstance(mode_decision, dict) else {}
     if not isinstance(quota, dict):
         quota = {}
     if not bool(quota.get("enforce", True)):
         return
+    has_legacy_split = "core_per_level" in quota or "challenge_per_level" in quota
     core_required = int(quota.get("core_per_level", 3))
     challenge_required = int(quota.get("challenge_per_level", 2))
+    min_total = int(quota.get("min_total_per_level", 2))
+    max_total = int(quota.get("max_total_per_level", 5))
+    dynamic_quota = {} if has_legacy_split else build_dynamic_total_quota(active_levels, level_lookup, min_total, max_total)
     grouped = group_by_level(exercises)
     errors: list[str] = []
     for level_id in active_levels:
         items = grouped.get(level_id, [])
-        core = [x for x in items if not bool(x.get("is_challenge"))]
-        challenge = [x for x in items if bool(x.get("is_challenge"))]
-        if len(core) != core_required or len(challenge) != challenge_required:
-            errors.append(
-                f"{level_id}: core={len(core)}/{core_required}, challenge={len(challenge)}/{challenge_required}"
-            )
+        if has_legacy_split:
+            core = [x for x in items if not bool(x.get("is_challenge"))]
+            challenge = [x for x in items if bool(x.get("is_challenge"))]
+            if len(core) != core_required or len(challenge) != challenge_required:
+                errors.append(
+                    f"{level_id}: core={len(core)}/{core_required}, challenge={len(challenge)}/{challenge_required}"
+                )
+            continue
+
+        expected = dynamic_quota.get(level_id, min_total)
+        if len(items) != expected:
+            errors.append(f"{level_id}: total={len(items)}/{expected}")
     require(not errors, "Level quota mismatch: " + " | ".join(errors))
 
 
@@ -184,6 +233,8 @@ def main() -> int:
 
     learning_plan = read_json(workspace / "planning" / "learning_plan.json")
     mode_decision = read_json(workspace / "analysis" / "current" / "exercise_mode_decision.json")
+    level_map = read_json(workspace / "analysis" / "current" / "level_map.json")
+    level_lookup = build_level_lookup(level_map)
     catalog = read_json(workspace / "planning" / "exercise_catalog.json")
     exercises = catalog.get("exercises", [])
     require(isinstance(exercises, list) and bool(exercises), "Exercise catalog is empty.")
@@ -193,7 +244,7 @@ def main() -> int:
     require(bool(active_levels), "learning_plan.active_levels is empty.")
 
     validate_live_coding_policy(exercises)
-    validate_level_quota(exercises, active_levels, mode_decision)
+    validate_level_quota(exercises, active_levels, mode_decision, level_lookup)
     validate_challenge_strength(exercises, active_levels)
     validate_progression(exercises, level_order)
     validate_mode_mix(exercises, mode_decision)

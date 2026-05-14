@@ -103,6 +103,36 @@ python scripts/generate_exercise_assets.py .\learning_workspace\planning\exercis
 python scripts/render_plan_pages.py .\learning_workspace\planning\learning_plan.json .\learning_workspace\planning\exercise_catalog.json .\learning_workspace\analysis\current\level_map.json .\learning_workspace\plan
 ```
 
+## Exercise Quota (Per Level)
+
+Configure exercise count policy in `analysis/current/exercise_mode_decision.json` via `level_quota`.
+
+Recommended dynamic mode (difficulty-aware):
+
+```json
+{
+  "level_quota": {
+    "enforce": true,
+    "min_total_per_level": 2,
+    "max_total_per_level": 5
+  }
+}
+```
+
+With this mode, active levels receive different total exercise counts based on level complexity (higher difficulty gets more exercises, lower difficulty gets fewer), constrained to the configured min/max range.
+
+Legacy fixed-split mode is still supported:
+
+```json
+{
+  "level_quota": {
+    "enforce": true,
+    "core_per_level": 3,
+    "challenge_per_level": 2
+  }
+}
+```
+
 ## Testing
 
 ```powershell

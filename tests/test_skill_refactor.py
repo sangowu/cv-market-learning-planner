@@ -765,6 +765,57 @@ def test_validate_generation_rejects_quota_mismatch(tmp_path: Path) -> None:
     assert "Level quota mismatch" in error_text
 
 
+def test_validate_generation_passes_with_dynamic_level_quota(tmp_path: Path) -> None:
+    workspace = tmp_path / "learning_workspace"
+    run_script("init_learning_workspace.py", str(workspace))
+    write_json(workspace / "analysis" / "current" / "cv_profile.json", {"ok": True})
+    write_json(workspace / "analysis" / "current" / "market_demand.json", {"ok": True})
+    write_json(workspace / "analysis" / "current" / "gap_analysis.json", {"ok": True})
+    write_json(workspace / "analysis" / "current" / "level_map.json", build_level_map())
+    write_json(workspace / "planning" / "learning_plan.json", build_learning_plan())
+    write_json(
+        workspace / "analysis" / "current" / "exercise_mode_decision.json",
+        {
+            "include_coding": False,
+            "include_debugging": False,
+            "mode_mix": {"interview": 1.0},
+            "level_quota": {
+                "enforce": True,
+                "min_total_per_level": 2,
+                "max_total_per_level": 5,
+            },
+        },
+    )
+
+    exercises = []
+    for level_id, total, profile in [
+        ("foundation-gaps", 2, {"objective_count": "low", "decision_density": "low", "ambiguity": "low", "verification_difficulty": "low"}),
+        ("system-rigor", 5, {"objective_count": "medium", "decision_density": "high", "ambiguity": "medium", "verification_difficulty": "high"}),
+        ("interview-readiness", 4, {"objective_count": "medium", "decision_density": "high", "ambiguity": "high", "verification_difficulty": "high"}),
+    ]:
+        for idx in range(total):
+            exercises.append(
+                {
+                    "id": f"{level_id}-dyn-{idx+1}",
+                    "level_id": level_id,
+                    "mode": "interview",
+                    "type": "behavioral",
+                    "track": "interview",
+                    "is_challenge": False,
+                    "complexity_profile": {
+                        **profile,
+                        "statefulness": "medium",
+                        "scaffolding_strength": "low",
+                        "delivery_scope": "timed",
+                    },
+                }
+            )
+    write_json(workspace / "planning" / "exercise_catalog.json", {"exercises": exercises})
+
+    result = run_script("validate_generation.py", str(workspace))
+    assert "Generation validation passed" in result.stdout
+
+
 def test_static_validation_and_docs_consistency() -> None:
     script_paths = sorted(str(path) for path in SCRIPTS_DIR.glob("*.py"))
     env = os.environ.copy()

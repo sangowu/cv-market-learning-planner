@@ -43,6 +43,7 @@ Use this skill when the user asks for any of the following:
    - `analysis/current/market_demand.json`
    - `analysis/current/gap_analysis.json`
    - `analysis/current/level_map.json`
+   - `analysis/current/exercise_mode_decision.json`
 4. Write the planning artifacts:
    - `planning/learning_plan.json`
    - `planning/exercise_catalog.json`
@@ -126,6 +127,16 @@ Directory details and file schemas are in `references/schemas.md`.
 
 - Let the exercise scope come from the gap analysis and level map.
 - First decide the exercise complexity profile for the level, then instantiate the topic from CV evidence and market demand.
+- Let the model decide whether coding/debugging tracks should be generated for the current user profile. Do not hard-code role-family allow/deny lists for exercise modes.
+- Before exercise generation, write `analysis/current/exercise_mode_decision.json` with at least:
+  - `include_coding`
+  - `include_debugging`
+  - `mode_mix`
+  - `confidence`
+  - `rationale`
+  - `evidence`
+- If coding/debugging is enabled by the model, the rationale must cite concrete CV evidence and/or target-role market evidence.
+- If coding/debugging is disabled by the model, prioritize interview, case, communication, project-defense, and role-relevant decision exercises.
 - Infer the learner-facing content language from CV language evidence and user prompt language.
 - Use the strongest CV-supported language as the default output language for learner-facing artifacts when no explicit user language preference is provided.
 - Keep learner-facing language consistent across `planning/learning_plan.json` summaries, exercise prompts, review notes, and rendered plan/report pages for a single generation cycle.

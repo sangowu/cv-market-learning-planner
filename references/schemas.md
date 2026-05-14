@@ -14,11 +14,13 @@ learning_workspace/
       market_demand.json
       gap_analysis.json
       level_map.json
+      exercise_mode_decision.json
     history/
       <timestamp>_cv_profile.json
       <timestamp>_market_demand.json
       <timestamp>_gap_analysis.json
       <timestamp>_level_map.json
+      <timestamp>_exercise_mode_decision.json
 
   planning/
     learning_plan.json
@@ -136,6 +138,42 @@ Ordering rule:
 - dependency constraints first
 - market priority second
 - CV weakness severity third
+
+## `analysis/current/exercise_mode_decision.json`
+
+This file records model-driven decisions about exercise-track mix for the current user profile.
+
+```json
+{
+  "include_coding": true,
+  "include_debugging": true,
+  "mode_mix": {
+    "coding": 0.5,
+    "debugging": 0.2,
+    "interview": 0.3
+  },
+  "level_quota": {
+    "enforce": true,
+    "min_total_per_level": 2,
+    "max_total_per_level": 5
+  },
+  "confidence": 0.82,
+  "rationale": "Target role and CV project evidence both require implementation and debugging fluency.",
+  "evidence": {
+    "cv": ["Python delivery evidence across recent projects"],
+    "market": ["Role postings require coding interviews and debugging rounds"]
+  }
+}
+```
+
+Rules:
+
+- Mode inclusion should be decided by model reasoning, not hard-coded role-family allow/deny lists.
+- If `include_coding` or `include_debugging` is `true`, rationale and evidence must explicitly justify why.
+- `mode_mix` should sum close to 1.0 and reflect the planned emphasis for the current cycle.
+- `level_quota` supports two modes:
+  - dynamic total-per-level allocation (recommended): set `min_total_per_level` and `max_total_per_level`; the system allocates more exercises to higher-difficulty active levels.
+  - legacy split allocation: set `core_per_level` and `challenge_per_level` to enforce exact per-level counts by challenge flag.
 
 ## `planning/exercise_catalog.json`
 

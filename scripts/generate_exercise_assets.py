@@ -52,6 +52,14 @@ DEFAULT_PREREQ_SUPPORT_BY_LEVEL = {
     "interview-readiness": "assume",
 }
 
+RANK_3 = {"low": 0, "medium": 1, "high": 2}
+DIFFICULTY_DIMS = [
+    "objective_count",
+    "decision_density",
+    "ambiguity",
+    "verification_difficulty",
+]
+
 
 def normalize_language_name(value: str) -> str:
     return value.strip().lower().replace("_", "-")
@@ -229,6 +237,56 @@ def load_active_levels(workspace: Path) -> list[str]:
     return [item for item in active if isinstance(item, str)]
 
 
+def load_level_map_lookup(workspace: Path) -> dict[str, dict]:
+    path = workspace / "analysis" / "current" / "level_map.json"
+    if not path.exists():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        return {}
+    levels = payload.get("levels")
+    if not isinstance(levels, list):
+        return {}
+    return {
+        level.get("id"): level
+        for level in levels
+        if isinstance(level, dict) and isinstance(level.get("id"), str)
+    }
+
+
+def level_difficulty_score(level: dict) -> float:
+    profile = level.get("complexity_profile", {})
+    if not isinstance(profile, dict):
+        return 0.0
+    values = [RANK_3.get(str(profile.get(dim, "")).lower(), 0) for dim in DIFFICULTY_DIMS]
+    return sum(values) / max(len(values), 1)
+
+
+def build_dynamic_total_quota(
+    active_levels: list[str],
+    level_lookup: dict[str, dict],
+    min_total: int,
+    max_total: int,
+) -> dict[str, int]:
+    if not active_levels:
+        return {}
+    if min_total > max_total:
+        min_total, max_total = max_total, min_total
+    scored = []
+    for level_id in active_levels:
+        scored.append((level_id, level_difficulty_score(level_lookup.get(level_id, {}))))
+    scored.sort(key=lambda item: item[1], reverse=True)
+    if len(scored) == 1:
+        return {scored[0][0]: max_total}
+
+    span = max_total - min_total
+    quotas: dict[str, int] = {}
+    for idx, (level_id, _) in enumerate(scored):
+        ratio = (len(scored) - 1 - idx) / (len(scored) - 1)
+        quotas[level_id] = int(round(min_total + span * ratio))
+    return quotas
+
+
 def validate_mode_decision_alignment(exercises: list[dict], mode_decision: dict) -> None:
     include_coding = mode_decision.get("include_coding")
     include_debugging = mode_decision.get("include_debugging")
@@ -250,15 +308,24 @@ def validate_mode_decision_alignment(exercises: list[dict], mode_decision: dict)
         raise ValueError("Mode decision disables debugging exercises, but debugging exercises were generated.")
 
 
-def validate_level_quota(exercises: list[dict], active_levels: list[str], mode_decision: dict | None) -> None:
+def validate_level_quota(
+    exercises: list[dict],
+    active_levels: list[str],
+    mode_decision: dict | None,
+    level_lookup: dict[str, dict],
+) -> None:
     if not active_levels or mode_decision is None:
         return
 
     quota = mode_decision.get("level_quota")
     if not isinstance(quota, dict):
         quota = {}
+    has_legacy_split = "core_per_level" in quota or "challenge_per_level" in quota
     core_required = int(quota.get("core_per_level", 3))
     challenge_required = int(quota.get("challenge_per_level", 2))
+    min_total = int(quota.get("min_total_per_level", 2))
+    max_total = int(quota.get("max_total_per_level", 5))
+    dynamic_quota = {} if has_legacy_split else build_dynamic_total_quota(active_levels, level_lookup, min_total, max_total)
     enforce = bool(quota.get("enforce", True))
     if not enforce:
         return
@@ -266,13 +333,19 @@ def validate_level_quota(exercises: list[dict], active_levels: list[str], mode_d
     errors: list[str] = []
     for level_id in active_levels:
         level_items = [ex for ex in exercises if ex.get("level_id") == level_id]
-        challenge_items = [ex for ex in level_items if bool(ex.get("is_challenge"))]
-        core_items = [ex for ex in level_items if not bool(ex.get("is_challenge"))]
-        if len(core_items) != core_required or len(challenge_items) != challenge_required:
-            errors.append(
-                f"{level_id}: core={len(core_items)} (required {core_required}), "
-                f"challenge={len(challenge_items)} (required {challenge_required})"
-            )
+        if has_legacy_split:
+            challenge_items = [ex for ex in level_items if bool(ex.get("is_challenge"))]
+            core_items = [ex for ex in level_items if not bool(ex.get("is_challenge"))]
+            if len(core_items) != core_required or len(challenge_items) != challenge_required:
+                errors.append(
+                    f"{level_id}: core={len(core_items)} (required {core_required}), "
+                    f"challenge={len(challenge_items)} (required {challenge_required})"
+                )
+            continue
+
+        expected = dynamic_quota.get(level_id, min_total)
+        if len(level_items) != expected:
+            errors.append(f"{level_id}: total={len(level_items)} (required {expected})")
     if errors:
         raise ValueError("Level quota validation failed: " + " | ".join(errors))
 
@@ -703,6 +776,7 @@ def main() -> int:
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
     mode_decision = load_mode_decision(workspace)
     active_levels = load_active_levels(workspace)
+    level_lookup = load_level_map_lookup(workspace)
     cv_profile_path = workspace / "analysis" / "current" / "cv_profile.json"
     cv_language_evidence: list[str] = []
     if cv_profile_path.exists():
@@ -728,7 +802,7 @@ def main() -> int:
 
     if mode_decision is not None:
         validate_mode_decision_alignment(normalized_exercises, mode_decision)
-    validate_level_quota(normalized_exercises, active_levels, mode_decision)
+    validate_level_quota(normalized_exercises, active_levels, mode_decision, level_lookup)
 
     catalog["exercises"] = normalized_exercises
     write_json(catalog_path, catalog)

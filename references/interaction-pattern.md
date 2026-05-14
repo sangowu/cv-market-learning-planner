@@ -7,13 +7,14 @@
 3. Infer role family and seniority from the CV.
 4. Browse for current global market demand using that inferred target profile.
 5. Produce `analysis/current/cv_profile.json`, `analysis/current/market_demand.json`, `analysis/current/gap_analysis.json`, and `analysis/current/level_map.json`.
-6. For each active level, decide the intended complexity profile before choosing the concrete exercise topic.
-7. For `foundation-gaps` coding tasks, choose the primary language from CV language evidence and prefer the most foundational language track first.
-8. Decide whether prerequisites for each exercise should be taught, reminded, or assumed, based on level semantics and learner evidence.
-9. For coding exercises, set the learner responsibility to implementation-only and keep tests system-generated and visible by default.
-10. Produce `planning/learning_plan.json` and `planning/exercise_catalog.json`.
-11. Run `scripts/generate_exercise_assets.py`, which should fail fast if an exercise falls outside the owning level's complexity constraints.
-12. Run `scripts/render_plan_pages.py`.
+6. Produce `analysis/current/exercise_mode_decision.json` using model reasoning for mode selection (`coding`, `debugging`, `interview`, etc.) with rationale and evidence.
+7. For each active level, decide the intended complexity profile before choosing the concrete exercise topic.
+8. If coding tracks are enabled by the model decision, choose the primary language from CV language evidence and prefer the most foundational language track first.
+9. Decide whether prerequisites for each exercise should be taught, reminded, or assumed, based on level semantics and learner evidence.
+10. For coding exercises, set the learner responsibility to implementation-only and keep tests system-generated and visible by default.
+11. Produce `planning/learning_plan.json` and `planning/exercise_catalog.json`.
+12. Run `scripts/generate_exercise_assets.py`, which should fail fast if an exercise falls outside the owning level's complexity constraints.
+13. Run `scripts/render_plan_pages.py`.
 
 ## After a user submission
 

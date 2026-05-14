@@ -15,10 +15,8 @@ from workspace_model import (
     default_progress_map,
     ensure_dir,
     history_timestamp,
-    read_json,
     write_json_if_missing,
 )
-
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
