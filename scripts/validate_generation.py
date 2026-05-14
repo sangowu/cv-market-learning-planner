@@ -12,13 +12,11 @@ DEFAULT_MONOTONIC_DIMS = [
     "verification_difficulty",
 ]
 CODING_PROMPT_REQUIRED_HEADERS = [
-    "## Function Contract",
-    "## Input Schema",
-    "## Output Schema",
-    "## Metric Definitions",
-    "## Edge Cases",
-    "## Constraints",
-    "## Acceptance Criteria",
+    "## 题目",
+    "## 示例",
+    "## 约束",
+    "## 函数签名",
+    "## 如何验证",
 ]
 
 
@@ -256,3 +254,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

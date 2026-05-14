@@ -211,11 +211,13 @@ Directory details and file schemas are in `references/schemas.md`.
   - `scaffolded`
   - `sparse`
   - `from-scratch`
-- Every generated coding file should include a complete LeetCode-style header at the top, including difficulty, topics, problem statement, examples, constraints, function signature, expected complexity, hints, deliverables, evaluation method, expected output, and verification notes.
+- Every generated coding file should include a concise learner-facing header: title, problem statement, function signature, examples, expected complexity, and test command. Do not include internal metadata such as level id, source, user responsibility, test strategy, complexity profile, language-selection rationale, fit rationale, or schema boilerplate in learner-facing `prompt.md`, `starter.py`, or `answer_notes.md`; keep those fields in JSON artifacts for validation and planning.
+- Learner-facing prompts should be short enough to start immediately. For coding tasks, include only: goal, problem, examples, constraints, function signature, complexity target, hints, and verification command. For interview tasks, include only: goal, task, expected output, and suggested flow.
 
 ## Progress-update rules
 
 - Preserve raw submissions in append-only history.
+- Each exercise `submissions/` directory should include a learner-facing `feedback.md` template for the latest attempt notes, feedback, and next-step improvements; do not overwrite it if the learner has already edited it.
 - Preserve structured reviews in `progress/reviews.jsonl`.
 - Update `planning/progress_map.json`, `progress/stats.json`, and `progress/progress.md` without deleting older records.
 
@@ -245,5 +247,7 @@ When a user asks for daily updating, create or maintain a workspace-local refres
 - Regenerates any daily HTML view, such as `plan/daily.html`, and updates `progress/stats.json.latest_daily_date`.
 - Keeps personal daily state in the workspace, not in `SKILL.md`; this file stores only the reusable rule.
 - Provides a workspace-local open entrypoint, such as `scripts/open_learning_plan.ps1`, and opens the most relevant rendered HTML page after generation or exercise refresh when the user has requested auto-open behavior.
+
+
 
 

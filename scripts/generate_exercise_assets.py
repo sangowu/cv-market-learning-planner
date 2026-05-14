@@ -443,121 +443,37 @@ def render_leetcode_block(exercise: dict) -> str:
 
 
 def build_code_header(exercise: dict) -> str:
-    deliverables = "\n".join(f"- {item}" for item in exercise.get("deliverables", [])) or "- Complete the task."
-    profile_lines = "\n".join(
-        f"- {key}: {value}" for key, value in exercise.get("complexity_profile", {}).items()
-    ) or "- pending"
-    objective_lines = "\n".join(
-        f"- {item}" for item in exercise.get("learning_objectives", [])
-    ) or "- pending"
-    spec = coding_spec_sections(exercise)
-    leetcode_block = render_leetcode_block(exercise)
+    topics = ", ".join(str(item) for item in exercise.get("topics", []) if str(item).strip()) or "general"
+    examples = []
+    for idx, example in enumerate(exercise.get("examples", []), start=1):
+        if isinstance(example, dict):
+            examples.append(f"Example {idx}: input={example.get('input', '')}, output={example.get('output', '')}")
+        else:
+            examples.append(f"Example {idx}: {example}")
+    examples_text = "\n".join(examples) or "See prompt.md for examples."
+    complexity = exercise.get("expected_complexity", {})
+    if isinstance(complexity, dict) and complexity:
+        complexity_text = "; ".join(f"{key}: {value}" for key, value in complexity.items())
+    else:
+        complexity_text = "See prompt.md."
     return (
         '"""\n'
-        f"Title: {exercise['title']}\n"
-        f"Level: {exercise['level_id']}\n"
-        f"Mode: {exercise.get('mode', 'coding')}\n"
-        f"Type: {exercise.get('type', 'exercise')}\n"
-        f"Source: {exercise.get('source', 'plan')}\n"
-        f"Style: {exercise.get('style', 'exercise')}\n"
-        f"Support Level: {exercise.get('support_level', '')}\n\n"
-        f"Language Focus: {exercise.get('language_focus', '')}\n\n"
-        f"Implementation Target: {exercise.get('implementation_target', '')}\n"
-        f"User Responsibility: {exercise.get('user_responsibility', '')}\n"
-        f"Test Strategy: {exercise.get('test_strategy', '')}\n"
-        f"Test Edit Policy: {exercise.get('test_edit_policy', '')}\n\n"
-        "Training Goal:\n"
-        f"{exercise.get('summary', '')}\n\n"
-        "Why This Fits The Level:\n"
-        f"{exercise.get('fit_rationale', '')}\n\n"
-        "Language Selection Rationale:\n"
-        f"{exercise.get('language_selection_rationale', '')}\n\n"
-        "Learning Objectives:\n"
-        f"{objective_lines}\n\n"
-        f"{leetcode_block}"
-        "Complexity Profile:\n"
-        f"{profile_lines}\n\n"
-        "Verification Flow:\n"
-        f"{chr(10).join(f'- {step}' for step in exercise.get('verification_flow', [])) or '- pending'}\n\n"
-        "Task:\n"
-        f"{exercise.get('prompt', '')}\n\n"
-        "Function Contract:\n"
-        f"{spec['function_contract']}\n\n"
-        "Input Schema:\n"
-        f"{spec['input_schema']}\n\n"
-        "Output Schema:\n"
-        f"{spec['output_schema']}\n\n"
-        "Metric Definitions:\n"
-        f"{spec['metric_definitions']}\n\n"
-        "Edge Cases:\n"
-        f"{spec['edge_cases']}\n\n"
-        "Constraints / Hints:\n"
-        "- Work from the provided evidence and verification target.\n"
-        "- Keep the implementation narrow and testable.\n"
-        "- Tests are pre-generated and visible.\n"
-        "- Do not edit the tests unless the exercise explicitly says it is a test-design exercise.\n\n"
-        f"{spec['constraints']}\n\n"
-        "Deliverables:\n"
-        f"{deliverables}\n\n"
-        "Evaluation Method:\n"
-        f"{exercise.get('evaluation_method', '')}\n\n"
-        "Expected Output:\n"
-        f"{exercise.get('expected_output_kind', '')}\n\n"
-        "Verification:\n"
-        f"{exercise.get('verification', '')}\n"
-        "\n"
-        "Acceptance Criteria:\n"
-        f"{spec['acceptance_criteria']}\n"
+        f"{exercise['title']}\n\n"
+        f"Task: {exercise.get('problem', exercise.get('prompt', ''))}\n\n"
+        f"Function: {exercise.get('function_signature', '')}\n"
+        f"Difficulty: {exercise.get('difficulty', '')}\n"
+        f"Topics: {topics}\n"
+        f"Expected complexity: {complexity_text}\n\n"
+        f"Examples:\n{examples_text}\n\n"
+        "Run tests: python -m pytest -q\n"
+        "Only edit this file. Do not edit generated tests.\n"
         '"""\n\n'
     )
 def build_sql_header(exercise: dict) -> str:
-    deliverables = "\n".join(f"-- - {item}" for item in exercise.get("deliverables", [])) or "-- - Complete the task."
-    profile_lines = "\n".join(
-        f"-- - {key}: {value}" for key, value in exercise.get("complexity_profile", {}).items()
-    ) or "-- - pending"
-    objective_lines = "\n".join(
-        f"-- - {item}" for item in exercise.get("learning_objectives", [])
-    ) or "-- - pending"
     return (
-        f"-- Title: {exercise['title']}\n"
-        f"-- Level: {exercise['level_id']}\n"
-        f"-- Mode: {exercise.get('mode', 'coding')}\n"
-        f"-- Type: {exercise.get('type', 'exercise')}\n"
-        f"-- Source: {exercise.get('source', 'plan')}\n"
-        f"-- Style: {exercise.get('style', 'exercise')}\n"
-        f"-- Support Level: {exercise.get('support_level', '')}\n"
-        f"-- Language Focus: {exercise.get('language_focus', '')}\n"
-        f"-- Implementation Target: {exercise.get('implementation_target', '')}\n"
-        f"-- User Responsibility: {exercise.get('user_responsibility', '')}\n"
-        f"-- Test Strategy: {exercise.get('test_strategy', '')}\n"
-        f"-- Test Edit Policy: {exercise.get('test_edit_policy', '')}\n"
-        "--\n"
-        "-- Training Goal:\n"
-        f"-- {exercise.get('summary', '')}\n"
-        "--\n"
-        "-- Problem Statement:\n"
-        f"-- {exercise.get('problem', exercise.get('prompt', ''))}\n"
-        "--\n"
-        "-- Learning Objectives:\n"
-        f"{objective_lines}\n"
-        "--\n"
-        "-- Complexity Profile:\n"
-        f"{profile_lines}\n"
-        "--\n"
-        "-- Verification Flow:\n"
-        f"{chr(10).join(f'-- - {step}' for step in exercise.get('verification_flow', [])) or '-- - pending'}\n"
-        "--\n"
-        "-- Deliverables:\n"
-        f"{deliverables}\n"
-        "--\n"
-        "-- Evaluation Method:\n"
-        f"-- {exercise.get('evaluation_method', '')}\n"
-        "--\n"
-        "-- Expected Output:\n"
-        f"-- {exercise.get('expected_output_kind', '')}\n"
-        "--\n"
-        "-- Verification:\n"
-        f"-- {exercise.get('verification', '')}\n\n"
+        f"-- {exercise['title']}\n"
+        f"-- Task: {exercise.get('problem', exercise.get('prompt', ''))}\n"
+        "-- Only edit this file. Do not edit generated tests.\n\n"
     )
 def build_test_header(exercise: dict) -> str:
     return (
@@ -569,73 +485,49 @@ def build_test_header(exercise: dict) -> str:
 
 
 def render_prompt(exercise: dict) -> str:
-    deliverables = "\n".join(f"- {item}" for item in exercise.get("deliverables", [])) or "- Complete the task."
-    profile_lines = "\n".join(
-        f"- `{key}`: {value}" for key, value in exercise.get("complexity_profile", {}).items()
-    ) or "- pending"
-    objective_lines = "\n".join(
-        f"- {item}" for item in exercise.get("learning_objectives", [])
-    ) or "- pending"
-    spec = coding_spec_sections(exercise) if exercise.get("mode") == "coding" else None
-    coding_details = ""
-    if spec:
-        leetcode = ""
-        if exercise.get("style") == "leetcode":
-            topics = ", ".join(str(item) for item in exercise.get("topics", []) if str(item).strip()) or "general"
-            examples = []
-            for idx, example in enumerate(exercise.get("examples", []), start=1):
-                if isinstance(example, dict):
-                    examples.append(f"### Example {idx}\nInput: `{example.get('input', '')}`\n\nOutput: `{example.get('output', '')}`")
-                else:
-                    examples.append(f"### Example {idx}\n{example}")
-            constraints = "\n".join(f"- {item}" for item in exercise.get("constraints", []) if str(item).strip()) or "- none"
-            hints = "\n".join(f"- {item}" for item in exercise.get("hints", []) if str(item).strip()) or "- none"
-            complexity = exercise.get("expected_complexity", {})
-            complexity_text = "\n".join(f"- {key}: {value}" for key, value in complexity.items()) if isinstance(complexity, dict) and complexity else "- not specified"
-            leetcode = (
-                f"\n## Difficulty\n{exercise.get('difficulty', 'easy')}\n\n"
-                f"## Topics\n{topics}\n\n"
-                f"## Problem Statement\n{exercise.get('problem', exercise.get('prompt', ''))}\n\n"
-                f"## Examples\n{chr(10).join(examples) or 'No examples provided.'}\n\n"
-                f"## Constraints\n{constraints}\n\n"
-                f"## Function Signature\n{exercise.get('function_signature', '')}\n\n"
-                f"## Expected Complexity\n{complexity_text}\n\n"
-                f"## Hints\n{hints}\n\n"
-            )
-        coding_details = (
-            f"{leetcode}"
-            f"## Function Contract\n{spec['function_contract']}\n\n"
-            f"## Input Schema\n{spec['input_schema']}\n\n"
-            f"## Output Schema\n{spec['output_schema']}\n\n"
-            f"## Metric Definitions\n{spec['metric_definitions']}\n\n"
-            f"## Edge Cases\n{spec['edge_cases']}\n\n"
-            f"## Acceptance Criteria\n{spec['acceptance_criteria']}\n"
+    if exercise.get("mode") == "coding":
+        topics = ", ".join(str(item) for item in exercise.get("topics", []) if str(item).strip()) or "general"
+        examples = []
+        for idx, example in enumerate(exercise.get("examples", []), start=1):
+            if isinstance(example, dict):
+                examples.append(f"### 示例 {idx}\n输入：`{example.get('input', '')}`\n\n输出：`{example.get('output', '')}`")
+            else:
+                examples.append(f"### 示例 {idx}\n{example}")
+        constraints = "\n".join(f"- {item}" for item in exercise.get("constraints", []) if str(item).strip()) or "- 无特殊限制"
+        hints = "\n".join(f"- {item}" for item in exercise.get("hints", []) if str(item).strip()) or "- 先写出最直接的正确解，再考虑复杂度。"
+        complexity = exercise.get("expected_complexity", {})
+        if isinstance(complexity, dict) and complexity:
+            complexity_text = "\n".join(f"- {key}: {value}" for key, value in complexity.items())
+        else:
+            complexity_text = "- 以测试通过和清晰解释为准"
+        return (
+            f"# {exercise['title']}\n\n"
+            f"## 目标\n{exercise.get('summary', '')}\n\n"
+            f"## 题目\n{exercise.get('problem', exercise.get('prompt', ''))}\n\n"
+            f"## 示例\n{chr(10).join(examples) or '暂无示例'}\n\n"
+            f"## 约束\n{constraints}\n\n"
+            f"## 函数签名\n```python\n{exercise.get('function_signature', '')}\n```\n\n"
+            f"## 复杂度目标\n{complexity_text}\n\n"
+            f"## 提示\n{hints}\n\n"
+            "## 如何验证\n"
+            "1. 只修改 `starter.py`。\n"
+            "2. 不要修改生成的测试文件。\n"
+            "3. 在本练习目录运行：`python -m pytest -q`。\n"
+            "4. 通过后，在 `submissions/` 里写 5-8 句复盘。\n\n"
+            f"## 标签\n{topics}\n"
         )
+
+    deliverables = "\n".join(f"- {item}" for item in exercise.get("deliverables", [])) or "- 完成 answer_notes.md"
     return (
         f"# {exercise['title']}\n\n"
-        f"## Level\n{exercise['level_id']}\n\n"
-        f"## Mode\n{exercise.get('mode', 'coding')}\n\n"
-        f"## Type\n{exercise.get('type', 'exercise')}\n\n"
-        f"## Source\n{exercise.get('source', 'plan')}\n\n"
-        f"## Style\n{exercise.get('style', 'exercise')}\n\n"
-        f"## Language Focus\n{exercise.get('language_focus', '')}\n\n"
-        f"## Implementation Target\n{exercise.get('implementation_target', '')}\n\n"
-        f"## User Responsibility\n{exercise.get('user_responsibility', '')}\n\n"
-        f"## Test Strategy\n{exercise.get('test_strategy', '')}\n\n"
-        f"## Test Edit Policy\n{exercise.get('test_edit_policy', '')}\n\n"
-        f"## Summary\n{exercise.get('summary', '')}\n\n"
-        f"## Why This Fits The Level\n{exercise.get('fit_rationale', '')}\n\n"
-        f"## Language Selection Rationale\n{exercise.get('language_selection_rationale', '')}\n\n"
-        f"## Learning Objectives\n{objective_lines}\n\n"
-        f"## Complexity Profile\n{profile_lines}\n\n"
-        f"## Prompt\n{exercise.get('prompt', '')}\n\n"
-        f"{coding_details}"
-        f"## Verification Flow\n"
-        f"{chr(10).join(f'- {step}' for step in exercise.get('verification_flow', [])) or '- pending'}\n\n"
-        f"## Evaluation Method\n{exercise.get('evaluation_method', '')}\n\n"
-        f"## Expected Output\n{exercise.get('expected_output_kind', '')}\n\n"
-        f"## Verification\n{exercise.get('verification', '')}\n\n"
-        f"## Deliverables\n{deliverables}\n"
+        f"## 目标\n{exercise.get('summary', '')}\n\n"
+        f"## 任务\n{exercise.get('prompt', '')}\n\n"
+        "## 输出\n"
+        f"{deliverables}\n\n"
+        "## 建议流程\n"
+        "1. 先限时口述一版答案。\n"
+        "2. 再写入 `answer_notes.md`。\n"
+        "3. 用 `review_notes.md` 检查结论、证据、风险和追问。\n"
     )
 def render_rubric(exercise: dict) -> str:
     profile_lines = "\n".join(
@@ -818,7 +710,17 @@ def main() -> int:
         exercise_dir = level_dir / normalized["id"]
         exercise_dir.mkdir(parents=True, exist_ok=True)
         write_text(exercise_dir / "prompt.md", render_prompt(normalized))
-        (exercise_dir / "submissions").mkdir(exist_ok=True)
+        submissions_dir = exercise_dir / "submissions"
+        submissions_dir.mkdir(exist_ok=True)
+        feedback_path = submissions_dir / "feedback.md"
+        if not feedback_path.exists():
+            write_text(
+                feedback_path,
+                "# Feedback\n\n"
+                "## 本次提交\n\n"
+                "## 自动/人工反馈\n\n"
+                "## 下一步改进\n\n",
+            )
         normalized["resources"] = build_resources(normalized, exercise_dir, workspace)
         normalized_exercises.append(normalized)
 
@@ -834,3 +736,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
