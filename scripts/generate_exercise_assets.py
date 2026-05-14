@@ -4,9 +4,9 @@ import json
 import re
 import sys
 from pathlib import Path
+from typing import Any
 
 from workspace_model import ABSTRACT_LEVELS, write_json
-
 
 STARTER_BY_TYPE = {
     "python": "def solve() -> object:\n    raise NotImplementedError('Implement the exercise here.')\n",
@@ -97,6 +97,8 @@ def validate_level_fit(exercise: dict) -> None:
     constraints = COMPLEXITY_CONSTRAINTS_BY_LEVEL.get(level_id)
     if not constraints:
         raise ValueError(f"Unknown level_id `{level_id}` for exercise `{exercise['id']}`")
+    if not isinstance(constraints, dict):
+        raise ValueError(f"Invalid complexity constraints for level `{level_id}`")
 
     profile = exercise.get("complexity_profile", {})
     missing = [key for key in constraints if key not in profile]
@@ -197,6 +199,84 @@ def validate_foundation_language(exercise: dict, cv_language_evidence: list[str]
         )
 
 
+def validate_live_coding_policy(exercise: dict) -> None:
+    if exercise.get("mode") == "interview" and exercise.get("type") == "live-coding":
+        if not bool(exercise.get("allow_live_coding_talk_through")):
+            raise ValueError(
+                f"Exercise `{exercise['id']}` uses interview `live-coding` type without explicit opt-in. "
+                "Set `allow_live_coding_talk_through=true` if intentionally required."
+            )
+
+
+def load_mode_decision(workspace: Path) -> dict | None:
+    path = workspace / "analysis" / "current" / "exercise_mode_decision.json"
+    if not path.exists():
+        return None
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return payload if isinstance(payload, dict) else None
+
+
+def load_active_levels(workspace: Path) -> list[str]:
+    plan_path = workspace / "planning" / "learning_plan.json"
+    if not plan_path.exists():
+        return []
+    payload = json.loads(plan_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        return []
+    active = payload.get("active_levels")
+    if not isinstance(active, list):
+        return []
+    return [item for item in active if isinstance(item, str)]
+
+
+def validate_mode_decision_alignment(exercises: list[dict], mode_decision: dict) -> None:
+    include_coding = mode_decision.get("include_coding")
+    include_debugging = mode_decision.get("include_debugging")
+
+    coding_count = sum(1 for ex in exercises if ex.get("mode") == "coding")
+    debugging_count = sum(
+        1 for ex in exercises
+        if str(ex.get("track", "")).lower() == "debugging" or str(ex.get("type", "")).lower() == "debugging"
+    )
+
+    if include_coding is True and coding_count == 0:
+        raise ValueError("Mode decision requires coding exercises, but none were generated.")
+    if include_coding is False and coding_count > 0:
+        raise ValueError("Mode decision disables coding exercises, but coding exercises were generated.")
+
+    if include_debugging is True and debugging_count == 0:
+        raise ValueError("Mode decision requires debugging exercises, but none were generated.")
+    if include_debugging is False and debugging_count > 0:
+        raise ValueError("Mode decision disables debugging exercises, but debugging exercises were generated.")
+
+
+def validate_level_quota(exercises: list[dict], active_levels: list[str], mode_decision: dict | None) -> None:
+    if not active_levels or mode_decision is None:
+        return
+
+    quota = mode_decision.get("level_quota")
+    if not isinstance(quota, dict):
+        quota = {}
+    core_required = int(quota.get("core_per_level", 3))
+    challenge_required = int(quota.get("challenge_per_level", 2))
+    enforce = bool(quota.get("enforce", True))
+    if not enforce:
+        return
+
+    errors: list[str] = []
+    for level_id in active_levels:
+        level_items = [ex for ex in exercises if ex.get("level_id") == level_id]
+        challenge_items = [ex for ex in level_items if bool(ex.get("is_challenge"))]
+        core_items = [ex for ex in level_items if not bool(ex.get("is_challenge"))]
+        if len(core_items) != core_required or len(challenge_items) != challenge_required:
+            errors.append(
+                f"{level_id}: core={len(core_items)} (required {core_required}), "
+                f"challenge={len(challenge_items)} (required {challenge_required})"
+            )
+    if errors:
+        raise ValueError("Level quota validation failed: " + " | ".join(errors))
+
+
 def starter_extension(exercise: dict) -> str:
     if exercise.get("starter_ext"):
         return exercise["starter_ext"]
@@ -242,6 +322,53 @@ def render_prerequisite_units_markdown(exercise: dict) -> str:
     return "\n".join(f"- {item}" for item in prerequisites) or "- none"
 
 
+def render_lines(items: list[str], fallback: str, prefix: str = "- ") -> str:
+    if items:
+        return "\n".join(f"{prefix}{item}" for item in items)
+    return f"{prefix}{fallback}"
+
+
+def render_schema_block(value: object, fallback: str) -> str:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    if isinstance(value, list) and value:
+        return "\n".join(f"- {item}" for item in value if str(item).strip())
+    return fallback
+
+
+def coding_spec_sections(exercise: dict) -> dict:
+    return {
+        "function_contract": str(
+            exercise.get("function_contract")
+            or f"{exercise.get('implementation_target', 'starter.py')}: implement the required public function(s)."
+        ),
+        "input_schema": render_schema_block(
+            exercise.get("input_schema"),
+            "Use the fields described in the task prompt and validate required keys.",
+        ),
+        "output_schema": render_schema_block(
+            exercise.get("output_schema"),
+            "Return a JSON-serializable structure that matches the verification target.",
+        ),
+        "metric_definitions": render_schema_block(
+            exercise.get("metric_definitions"),
+            "Use exact-match behavior where applicable and keep calculations deterministic.",
+        ),
+        "edge_cases": render_lines(
+            [str(item) for item in exercise.get("edge_cases", []) if str(item).strip()],
+            "Handle empty input safely.",
+        ),
+        "constraints": render_lines(
+            [str(item) for item in exercise.get("constraints", []) if str(item).strip()],
+            "Do not use third-party libraries.",
+        ),
+        "acceptance_criteria": render_lines(
+            [str(item) for item in exercise.get("acceptance_criteria", []) if str(item).strip()],
+            "All generated tests pass.",
+        ),
+    }
+
+
 def build_code_header(exercise: dict) -> str:
     deliverables = "\n".join(f"- {item}" for item in exercise.get("deliverables", [])) or "- Complete the task."
     profile_lines = "\n".join(
@@ -251,6 +378,7 @@ def build_code_header(exercise: dict) -> str:
         f"- {item}" for item in exercise.get("learning_objectives", [])
     ) or "- pending"
     prerequisite_block = render_prerequisite_units_text(exercise)
+    spec = coding_spec_sections(exercise)
     return (
         '"""\n'
         f"Title: {exercise['title']}\n"
@@ -283,10 +411,21 @@ def build_code_header(exercise: dict) -> str:
         f"{chr(10).join(f'- {step}' for step in exercise.get('verification_flow', [])) or '- pending'}\n\n"
         "Task:\n"
         f"{exercise.get('prompt', '')}\n\n"
+        "Function Contract:\n"
+        f"{spec['function_contract']}\n\n"
+        "Input Schema:\n"
+        f"{spec['input_schema']}\n\n"
+        "Output Schema:\n"
+        f"{spec['output_schema']}\n\n"
+        "Metric Definitions:\n"
+        f"{spec['metric_definitions']}\n\n"
+        "Edge Cases:\n"
+        f"{spec['edge_cases']}\n\n"
         "Constraints / Hints:\n"
         "- Work from the provided evidence and verification target.\n"
         "- Keep the implementation narrow and testable.\n"
         "- Prefer explicit trade-offs over hidden complexity.\n\n"
+        f"{spec['constraints']}\n\n"
         "- Tests are pre-generated and visible.\n"
         "- Do not edit the tests unless the exercise explicitly says it is a test-design exercise.\n\n"
         "Deliverables:\n"
@@ -297,6 +436,9 @@ def build_code_header(exercise: dict) -> str:
         f"{exercise.get('expected_output_kind', '')}\n\n"
         "Verification:\n"
         f"{exercise.get('verification', '')}\n"
+        "\n"
+        "Acceptance Criteria:\n"
+        f"{spec['acceptance_criteria']}\n"
         '"""\n\n'
     )
 
@@ -384,6 +526,18 @@ def render_prompt(exercise: dict) -> str:
         f"- {item}" for item in exercise.get("learning_objectives", [])
     ) or "- pending"
     prerequisite_lines = render_prerequisite_units_markdown(exercise)
+    spec = coding_spec_sections(exercise) if exercise.get("mode") == "coding" else None
+    coding_details = ""
+    if spec:
+        coding_details = (
+            f"\n## Function Contract\n{spec['function_contract']}\n\n"
+            f"## Input Schema\n{spec['input_schema']}\n\n"
+            f"## Output Schema\n{spec['output_schema']}\n\n"
+            f"## Metric Definitions\n{spec['metric_definitions']}\n\n"
+            f"## Edge Cases\n{spec['edge_cases']}\n\n"
+            f"## Constraints\n{spec['constraints']}\n\n"
+            f"## Acceptance Criteria\n{spec['acceptance_criteria']}\n"
+        )
     return (
         f"# {exercise['title']}\n\n"
         f"## Level\n{exercise['level_id']}\n\n"
@@ -403,6 +557,7 @@ def render_prompt(exercise: dict) -> str:
         f"## Prerequisites\n{prerequisite_lines}\n\n"
         f"## Complexity Profile\n{profile_lines}\n\n"
         f"## Prompt\n{exercise.get('prompt', '')}\n\n"
+        f"{coding_details}"
         f"## Verification Flow\n"
         f"{chr(10).join(f'- {step}' for step in exercise.get('verification_flow', [])) or '- pending'}\n\n"
         f"## Evaluation Method\n{exercise.get('evaluation_method', '')}\n\n"
@@ -480,13 +635,17 @@ def build_resources(exercise: dict, exercise_dir: Path, workspace: Path) -> list
 
 def normalize_exercise(exercise: dict) -> dict:
     normalized = dict(exercise)
+    base_complexity: dict[str, Any] = {}
+    complexity_candidate = DEFAULT_COMPLEXITY_BY_LEVEL.get(normalized["level_id"], {})
+    if isinstance(complexity_candidate, dict):
+        base_complexity = dict(complexity_candidate)
     normalized["support_level"] = normalized.get(
         "support_level",
         DEFAULT_SUPPORT_BY_LEVEL.get(normalized["level_id"], "scaffolded"),
     )
     normalized.setdefault(
         "complexity_profile",
-        dict(DEFAULT_COMPLEXITY_BY_LEVEL.get(normalized["level_id"], {})),
+        base_complexity,
     )
     normalized.setdefault("learning_objectives", [])
     normalized.setdefault("prerequisites", [])
@@ -518,6 +677,16 @@ def normalize_exercise(exercise: dict) -> dict:
     normalized.setdefault("expected_output_kind", "code")
     normalized.setdefault("verification", "Review the output against the exercise requirements.")
     normalized.setdefault("deliverables", ["Completed exercise assets"])
+    normalized.setdefault("is_challenge", False)
+    if "track" not in normalized:
+        if normalized.get("mode") == "coding" and normalized.get("type") == "debugging":
+            normalized["track"] = "debugging"
+        elif normalized.get("mode") == "coding":
+            normalized["track"] = "coding"
+        elif normalized.get("type") in {"system-design", "project-defense"}:
+            normalized["track"] = normalized["type"]
+        else:
+            normalized["track"] = "interview"
     return normalized
 
 
@@ -532,6 +701,8 @@ def main() -> int:
     exercises_root.mkdir(parents=True, exist_ok=True)
 
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    mode_decision = load_mode_decision(workspace)
+    active_levels = load_active_levels(workspace)
     cv_profile_path = workspace / "analysis" / "current" / "cv_profile.json"
     cv_language_evidence: list[str] = []
     if cv_profile_path.exists():
@@ -546,6 +717,7 @@ def main() -> int:
         validate_foundation_prerequisites(normalized)
         validate_foundation_language(normalized, cv_language_evidence)
         validate_coding_responsibility(normalized)
+        validate_live_coding_policy(normalized)
         level_dir = exercises_root / f"level-{normalized['level_id']}"
         exercise_dir = level_dir / normalized["id"]
         exercise_dir.mkdir(parents=True, exist_ok=True)
@@ -553,6 +725,10 @@ def main() -> int:
         (exercise_dir / "submissions").mkdir(exist_ok=True)
         normalized["resources"] = build_resources(normalized, exercise_dir, workspace)
         normalized_exercises.append(normalized)
+
+    if mode_decision is not None:
+        validate_mode_decision_alignment(normalized_exercises, mode_decision)
+    validate_level_quota(normalized_exercises, active_levels, mode_decision)
 
     catalog["exercises"] = normalized_exercises
     write_json(catalog_path, catalog)

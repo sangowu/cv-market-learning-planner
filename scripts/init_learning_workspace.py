@@ -36,6 +36,7 @@ def write_workspace_wrappers(root: Path) -> None:
             "  'generate-assets' = 'generate_exercise_assets.py'\n"
             "  'render-pages' = 'render_plan_pages.py'\n"
             "  'run-cycle' = 'run_cycle.py'\n"
+            "  'validate-generation' = 'validate_generation.py'\n"
             "}\n\n"
             "if (-not $toolMap.ContainsKey($Tool)) {\n"
             "  throw \"Unknown tool '$Tool'. Use one of: $($toolMap.Keys -join ', ')\"\n"
