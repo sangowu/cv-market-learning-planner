@@ -230,3 +230,20 @@ Directory details and file schemas are in `references/schemas.md`.
 
 - Read `references/schemas.md` for file formats and directory semantics.
 - Read `references/interaction-pattern.md` when updating exercises after user submissions.
+
+
+### Daily refresh rule
+
+For sustained interview-prep workspaces, daily tasks must be refreshable rather than a one-time static queue.
+When a user asks for daily updating, create or maintain a workspace-local refresh entrypoint, such as `scripts/refresh_daily.py` plus an optional shell wrapper, that:
+
+- Reads `planning/exercise_catalog.json` and `planning/progress_map.json`.
+- Selects from incomplete exercises when possible.
+- Includes, when available, at least one foundation coding/algorithm task, one project-defense or behavioral interview task, and one system-design or debugging task.
+- Writes the active queue to `daily/current.json`.
+- Appends the previous `daily/current.json` to `daily/history.jsonl` when the date changes.
+- Regenerates any daily HTML view, such as `plan/daily.html`, and updates `progress/stats.json.latest_daily_date`.
+- Keeps personal daily state in the workspace, not in `SKILL.md`; this file stores only the reusable rule.
+- Provides a workspace-local open entrypoint, such as `scripts/open_learning_plan.ps1`, and opens the most relevant rendered HTML page after generation or exercise refresh when the user has requested auto-open behavior.
+
+
